@@ -10,10 +10,7 @@ from typing import List
 
 logger = logging.getLogger(__name__)
 
-UNINSTALL_KEY = (
-    r"Software\Microsoft\Windows\CurrentVersion\Uninstall\"
-    r"isyuricunha.Quill_is1"
-)
+UNINSTALL_KEY = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\isyuricunha.Quill_is1"
 USER_DATA_FILES = ("config.json", "user_prompts.json")
 
 
