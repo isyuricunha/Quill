@@ -1,10 +1,11 @@
-"""Settings window extension for direct action hotkeys and translation settings."""
+"""Settings extensions for direct hotkeys, translation and updates."""
 
 import copy
 import logging
 import re
 
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QDialog,
     QFormLayout,
@@ -21,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 class SettingsWindow(BaseSettingsWindow):
-    """Adds direct action hotkeys and translation settings."""
+    """Add focused fork features to the standard settings window."""
 
     TRANSLATION_LANGUAGES = [
         "Portuguese (Brazil)",
@@ -51,15 +52,32 @@ class SettingsWindow(BaseSettingsWindow):
         self.input_target_language.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
         translation_layout.addRow("Target language:", self.input_target_language)
 
-        help_label = QLabel(
+        translation_help = QLabel(
             "Language used by the Translate action. Choose a common language or type any target language."
         )
-        help_label.setObjectName("subtitleLabel")
-        help_label.setWordWrap(True)
-        translation_layout.addRow("", help_label)
+        translation_help.setObjectName("subtitleLabel")
+        translation_help.setWordWrap(True)
+        translation_layout.addRow("", translation_help)
 
         translation_group.setLayout(translation_layout)
         layout.insertWidget(max(0, layout.count() - 1), translation_group)
+
+        updates_group = QGroupBox("Updates")
+        updates_layout = QFormLayout()
+        updates_layout.setSpacing(12)
+
+        self.checkbox_check_updates = QCheckBox("Check for updates when Quill starts")
+        updates_layout.addRow("", self.checkbox_check_updates)
+
+        updates_help = QLabel(
+            "Checks GitHub Releases once after startup. No notification is shown when Quill is already up to date."
+        )
+        updates_help.setObjectName("subtitleLabel")
+        updates_help.setWordWrap(True)
+        updates_layout.addRow("", updates_help)
+
+        updates_group.setLayout(updates_layout)
+        layout.insertWidget(max(0, layout.count() - 1), updates_group)
         return tab
 
     def _create_hotkey_tab(self):
@@ -86,8 +104,6 @@ class SettingsWindow(BaseSettingsWindow):
         direct_layout.addRow("", help_label)
 
         direct_group.setLayout(direct_layout)
-
-        # The base tab ends with a stretch. Insert the group immediately before it.
         layout.insertWidget(max(0, layout.count() - 1), direct_group)
         return tab
 
@@ -98,6 +114,9 @@ class SettingsWindow(BaseSettingsWindow):
             "translation.target_language", "English"
         )
         self.input_target_language.setCurrentText(target_language)
+        self.checkbox_check_updates.setChecked(
+            bool(self.config_manager.get("updates.check_on_startup", True))
+        )
 
         for prompt_key, default_hotkey in DIRECT_ACTION_HOTKEYS.items():
             hotkey = self.config_manager.get(
@@ -106,7 +125,6 @@ class SettingsWindow(BaseSettingsWindow):
             self.input_action_hotkeys[prompt_key].set_key_sequence(hotkey)
 
     def _validate_direct_hotkeys(self):
-        """Validate modifiers, reserved combinations, and collisions."""
         main_hotkey = self.input_hotkey.get_key_sequence()
         quick_hotkey = self.input_quick_hotkey.get_key_sequence()
         action_hotkeys = {
@@ -162,7 +180,6 @@ class SettingsWindow(BaseSettingsWindow):
         return action_hotkeys
 
     def _apply_translation_language(self, target_language: str):
-        """Apply the configured target language to the Translate prompt."""
         if not self.prompt_manager:
             return
 
@@ -182,15 +199,10 @@ class SettingsWindow(BaseSettingsWindow):
         else:
             marker = "You are a professional translator."
             if marker in template:
-                template = template.replace(
-                    marker,
-                    f"{marker}\n\n{target_line}",
-                    1,
-                )
+                template = template.replace(marker, f"{marker}\n\n{target_line}", 1)
             else:
                 template = f"{target_line}\n\n{template}"
 
-        # Migrate the original hardcoded target sentence when present.
         legacy_pattern = re.compile(
             r"Translate the text within <text> tags into [^.\n]+\."
         )
@@ -203,7 +215,6 @@ class SettingsWindow(BaseSettingsWindow):
 
         self.prompt_manager.update_prompt("translate", template=template)
 
-        # Keep the Prompts tab editor in sync if Translate is currently selected.
         if hasattr(self, "prompt_combo") and self.prompt_combo.currentIndex() >= 0:
             if self.prompt_combo.currentData() == "translate":
                 self.prompt_template_edit.setPlainText(template)
@@ -231,6 +242,9 @@ class SettingsWindow(BaseSettingsWindow):
         previous_target_language = self.config_manager.get(
             "translation.target_language", "English"
         )
+        previous_check_updates = bool(
+            self.config_manager.get("updates.check_on_startup", True)
+        )
 
         previous_user_prompts = None
         previous_prompts = None
@@ -245,6 +259,9 @@ class SettingsWindow(BaseSettingsWindow):
             self.config_manager.set(
                 "translation.target_language", target_language
             )
+            self.config_manager.set(
+                "updates.check_on_startup", self.checkbox_check_updates.isChecked()
+            )
             self._apply_translation_language(target_language)
 
             super()._on_save()
@@ -253,15 +270,17 @@ class SettingsWindow(BaseSettingsWindow):
             QMessageBox.critical(
                 self,
                 "Settings Error",
-                f"Failed to apply translation settings:\n\n{exc}",
+                f"Failed to apply settings:\n\n{exc}",
             )
 
-        # If base validation/save failed, restore the in-memory values as well.
         if self.result() != QDialog.DialogCode.Accepted:
             for prompt_key, hotkey in previous_values.items():
                 self.config_manager.set(f"hotkey.actions.{prompt_key}", hotkey)
             self.config_manager.set(
                 "translation.target_language", previous_target_language
+            )
+            self.config_manager.set(
+                "updates.check_on_startup", previous_check_updates
             )
 
             if self.prompt_manager and previous_user_prompts is not None:

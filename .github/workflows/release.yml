@@ -11,7 +11,7 @@ permissions:
 
 concurrency:
   group: auto-release
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   release:
@@ -88,6 +88,13 @@ jobs:
           "version=$major.$minor.$patch" >> $env:GITHUB_OUTPUT
           "base_ref=$baseRef" >> $env:GITHUB_OUTPUT
           Write-Host "Release version: $tag ($bump bump from v$baseVersion)"
+
+      - name: Embed release version
+        if: steps.version.outputs.should_release == 'true'
+        shell: pwsh
+        run: |
+          Set-Content -Path "resources/version.txt" -Value "${{ steps.version.outputs.version }}" -NoNewline -Encoding utf8
+          Write-Host "Embedded Quill version ${{ steps.version.outputs.version }}"
 
       - name: Install Python dependencies
         if: steps.version.outputs.should_release == 'true'
