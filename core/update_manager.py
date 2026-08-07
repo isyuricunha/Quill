@@ -2,14 +2,14 @@
 
 import json
 import logging
-import os
 import re
 import subprocess
-import sys
 import tempfile
 import urllib.request
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
+
+from core.app_paths import get_resource_dir, is_installed_build
 
 
 logger = logging.getLogger(__name__)
@@ -34,8 +34,7 @@ class UpdateManager:
         return tuple(int(part) for part in match.groups())
 
     def _read_current_version(self) -> str:
-        project_root = Path(__file__).resolve().parent.parent
-        version_file = project_root / "resources" / "version.txt"
+        version_file = get_resource_dir() / "version.txt"
 
         try:
             version = version_file.read_text(encoding="utf-8").strip()
@@ -89,37 +88,10 @@ class UpdateManager:
             "installed_build": self.is_installed_build(),
         }
 
-    def is_installed_build(self) -> bool:
-        """Return True when the running executable belongs to the Inno Setup install."""
-        if sys.platform != "win32" or not getattr(sys, "frozen", False):
-            return False
-
-        executable_dir = Path(sys.executable).resolve().parent
-
-        try:
-            import winreg
-
-            uninstall_key = (
-                r"Software\Microsoft\Windows\CurrentVersion\Uninstall\"
-                r"isyuricunha.Quill_is1"
-            )
-            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, uninstall_key) as key:
-                install_location, _ = winreg.QueryValueEx(key, "InstallLocation")
-
-            if install_location:
-                installed_dir = Path(install_location).resolve()
-                if executable_dir == installed_dir:
-                    return True
-        except (ImportError, FileNotFoundError, OSError):
-            pass
-
-        local_app_data = os.environ.get("LOCALAPPDATA")
-        if local_app_data:
-            expected_dir = (Path(local_app_data) / "Programs" / "Quill").resolve()
-            if executable_dir == expected_dir:
-                return True
-
-        return False
+    @staticmethod
+    def is_installed_build() -> bool:
+        """Return whether Quill is running from the installed build."""
+        return is_installed_build()
 
     def download_installer(self, update_info: Dict[str, Any]) -> Path:
         """Download the installer for a release into the user's temp directory."""
