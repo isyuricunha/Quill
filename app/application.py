@@ -26,7 +26,7 @@ from app.tray_manager import TrayManager
 
 # UI modules
 from ui.onboarding_window import OnboardingWindow
-from ui.settings_window import SettingsWindow
+from ui.direct_hotkey_settings import SettingsWindow
 from ui.popup_window import PopupWindow
 
 
