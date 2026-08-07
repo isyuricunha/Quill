@@ -36,6 +36,12 @@ logger = logging.getLogger(__name__)
 class QuillApp(QApplication):
     """Quill 메인 애플리케이션 클래스"""
 
+    DEFAULT_ACTION_HOTKEYS = {
+        "grammar_check": "<ctrl>+<alt>+g",
+        "rewrite": "<ctrl>+<alt>+r",
+        "translate": "<ctrl>+<alt>+t",
+    }
+
     # Signal: 백그라운드 스레드에서 에러 발생 시
     error_occurred = Signal(str, str)
 
@@ -76,6 +82,7 @@ class QuillApp(QApplication):
         self._last_prompt_key: str = ""
         self._last_instruction: str = ""
         self._quick_mode: bool = False  # 빠른 실행 모드 플래그
+        self._direct_prompt_key: str = ""  # 직접 액션 핫키로 실행할 프롬프트
         self._extraction_in_progress: bool = False  # 텍스트 추출 진행 중 플래그
 
         # AI 요청 동기화
@@ -114,6 +121,7 @@ class QuillApp(QApplication):
         # Hotkey Manager
         self.hotkey_manager.hotkey_pressed.connect(self._on_hotkey_pressed)
         self.hotkey_manager.quick_hotkey_pressed.connect(self._on_quick_hotkey_pressed)
+        self.hotkey_manager.action_hotkey_pressed.connect(self._on_action_hotkey_pressed)
 
         # Text Processor
         self.text_processor.text_extracted.connect(self._on_text_extracted)
@@ -178,6 +186,15 @@ class QuillApp(QApplication):
             )
             self.quit()
 
+    def _get_direct_action_hotkeys(self):
+        """설정에서 직접 액션 핫키를 로드합니다."""
+        return {
+            prompt_key: self.config_manager.get(
+                f"hotkey.actions.{prompt_key}", default_hotkey
+            )
+            for prompt_key, default_hotkey in self.DEFAULT_ACTION_HOTKEYS.items()
+        }
+
     def _start_app(self):
         """애플리케이션 시작"""
         try:
@@ -195,8 +212,14 @@ class QuillApp(QApplication):
             # 핫키 시작
             hotkey = self.config_manager.get("hotkey.key", "<ctrl>+<space>")
             quick_hotkey = self.config_manager.get("hotkey.quick_key", "")
-            self.hotkey_manager.start(hotkey, quick_hotkey)
-            logger.info(f"Hotkey started: main={hotkey}, quick={quick_hotkey or 'disabled'}")
+            action_hotkeys = self._get_direct_action_hotkeys()
+            self.hotkey_manager.start(hotkey, quick_hotkey, action_hotkeys)
+            logger.info(
+                "Hotkeys started: main=%s, quick=%s, actions=%s",
+                hotkey,
+                quick_hotkey or "disabled",
+                action_hotkeys,
+            )
 
             # 트레이 아이콘 생성
             self.tray_manager.create_tray_icon()
@@ -237,6 +260,7 @@ class QuillApp(QApplication):
 
         # 일반 모드로 텍스트 추출
         self._quick_mode = False
+        self._direct_prompt_key = ""
         self._extraction_in_progress = True
         self.text_processor.extract_selected_text()
 
@@ -255,6 +279,8 @@ class QuillApp(QApplication):
         if self._ai_request_in_progress:
             logger.debug("AI request in progress, ignoring quick hotkey")
             return
+
+        self._direct_prompt_key = ""
 
         # 이전 액션이 없으면 일반 모드로 팝업 표시
         if not self._last_prompt_key:
@@ -290,6 +316,36 @@ class QuillApp(QApplication):
 
         # 참고: 텍스트가 추출되면 _on_text_extracted()가 호출됨
 
+    @Slot(str, int, int)
+    def _on_action_hotkey_pressed(self, prompt_key: str, x: int, y: int):
+        """직접 액션 핫키로 선택된 텍스트를 팝업 없이 처리합니다."""
+        if self._ai_request_in_progress:
+            logger.debug("AI request in progress, ignoring direct action hotkey")
+            return
+        if self._extraction_in_progress:
+            logger.debug("Extraction in progress, ignoring direct action hotkey")
+            return
+
+        if not self.prompt_manager.get_prompt_info(prompt_key):
+            logger.warning("Direct action prompt does not exist: %s", prompt_key)
+            self.tray_manager.show_message(
+                "Direct Action",
+                f"Prompt '{prompt_key}' is not available."
+            )
+            return
+
+        logger.debug(
+            "Direct action hotkey pressed: %s at (%s, %s)",
+            prompt_key,
+            x,
+            y,
+        )
+
+        self._quick_mode = False
+        self._direct_prompt_key = prompt_key
+        self._extraction_in_progress = True
+        self.text_processor.extract_selected_text()
+
     def _create_popup_window(self):
         """팝업 윈도우 생성 및 워밍업"""
         if self.popup_window is not None:
@@ -320,11 +376,26 @@ class QuillApp(QApplication):
 
         if not text:
             logger.debug("No text selected, ignoring hotkey")
-            self._quick_mode = False  # 플래그 리셋
+            self._quick_mode = False
+            self._direct_prompt_key = ""
             return
 
-        logger.debug(f"Text extracted (length: {len(text)}), quick_mode={self._quick_mode}")
+        logger.debug(
+            "Text extracted (length: %s), quick_mode=%s, direct=%s",
+            len(text),
+            self._quick_mode,
+            self._direct_prompt_key or "none",
+        )
         self.current_text = text
+
+        # 직접 액션 모드: 팝업 없이 지정된 액션 바로 실행
+        if self._direct_prompt_key:
+            prompt_key = self._direct_prompt_key
+            self._direct_prompt_key = ""
+            self._quick_mode = False
+            logger.debug(f"Direct action mode: executing {prompt_key}")
+            self._on_action_requested(prompt_key, text, "")
+            return
 
         # 빠른 실행 모드: 팝업 없이 바로 AI 호출
         if self._quick_mode:
@@ -468,7 +539,8 @@ class QuillApp(QApplication):
             # 핫키 재시작
             hotkey = self.config_manager.get("hotkey.key", "<ctrl>+<space>")
             quick_hotkey = self.config_manager.get("hotkey.quick_key", "")
-            self.hotkey_manager.set_hotkeys(hotkey, quick_hotkey)
+            action_hotkeys = self._get_direct_action_hotkeys()
+            self.hotkey_manager.set_hotkeys(hotkey, quick_hotkey, action_hotkeys)
 
             logger.info("Configuration reloaded successfully")
 
