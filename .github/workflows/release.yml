@@ -85,10 +85,11 @@ jobs:
           $tag = "v$major.$minor.$patch"
           "should_release=true" >> $env:GITHUB_OUTPUT
           "tag=$tag" >> $env:GITHUB_OUTPUT
+          "version=$major.$minor.$patch" >> $env:GITHUB_OUTPUT
           "base_ref=$baseRef" >> $env:GITHUB_OUTPUT
           Write-Host "Release version: $tag ($bump bump from v$baseVersion)"
 
-      - name: Install dependencies
+      - name: Install Python dependencies
         if: steps.version.outputs.should_release == 'true'
         shell: pwsh
         run: |
@@ -100,15 +101,55 @@ jobs:
         shell: pwsh
         run: python build.py
 
-      - name: Package Windows build
+      - name: Package portable build
         if: steps.version.outputs.should_release == 'true'
-        id: package
+        id: portable
         shell: pwsh
         run: |
           $tag = "${{ steps.version.outputs.tag }}"
-          $zip = "Quill-$tag-windows.zip"
-          Compress-Archive -Path "dist\Quill\*" -DestinationPath $zip -Force
-          "zip=$zip" >> $env:GITHUB_OUTPUT
+          $portable = "Quill-$tag-portable-windows-x64.zip"
+          Compress-Archive -Path "dist\Quill\*" -DestinationPath $portable -Force
+          "file=$portable" >> $env:GITHUB_OUTPUT
+
+      - name: Install Inno Setup
+        if: steps.version.outputs.should_release == 'true'
+        shell: pwsh
+        run: choco install innosetup -y --no-progress
+
+      - name: Build Windows installer
+        if: steps.version.outputs.should_release == 'true'
+        id: installer
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+
+          $iscc = (Get-Command ISCC.exe -ErrorAction SilentlyContinue).Source
+          if (-not $iscc) {
+            $candidates = @(
+              "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
+              "${env:ProgramFiles(x86)}\Inno Setup 7\ISCC.exe",
+              "$env:ProgramFiles\Inno Setup 6\ISCC.exe",
+              "$env:ProgramFiles\Inno Setup 7\ISCC.exe"
+            )
+            $iscc = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          }
+
+          if (-not $iscc) {
+            throw "Inno Setup compiler (ISCC.exe) was not found."
+          }
+
+          & $iscc "/DAppVersion=$version" "installer.iss"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Inno Setup failed with exit code $LASTEXITCODE."
+          }
+
+          $installer = "Quill-v$version-setup-windows-x64.exe"
+          $installerPath = Join-Path "installer-output" $installer
+          if (-not (Test-Path $installerPath)) {
+            throw "Installer was not created at $installerPath"
+          }
+
+          "file=$installerPath" >> $env:GITHUB_OUTPUT
 
       - name: Create release notes
         if: steps.version.outputs.should_release == 'true'
@@ -124,11 +165,15 @@ jobs:
           ### Changes
           $($changes -join "`n")
 
-          ### Download
-          Extract `Quill-$tag-windows.zip` and run `Quill.exe`.
+          ### Downloads
+          - **Installer:** `Quill-$tag-setup-windows-x64.exe`
+          - **Portable:** `Quill-$tag-portable-windows-x64.zip`
+
+          The installer uses a per-user installation and does not require administrator privileges.
+          The portable build can be extracted anywhere and run directly with `Quill.exe`.
 
           ### Requirements
-          - Windows 10/11
+          - Windows 10/11 64-bit
           "@ | Set-Content -Path release-notes.md -Encoding utf8
 
       - name: Publish GitHub Release
@@ -138,5 +183,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $tag = "${{ steps.version.outputs.tag }}"
-          $zip = "${{ steps.package.outputs.zip }}"
-          gh release create $tag $zip --title "Quill $tag" --notes-file release-notes.md --target "${{ github.sha }}"
+          $portable = "${{ steps.portable.outputs.file }}"
+          $installer = "${{ steps.installer.outputs.file }}"
+          gh release create $tag $portable $installer --title "Quill $tag" --notes-file release-notes.md --target "${{ github.sha }}"
