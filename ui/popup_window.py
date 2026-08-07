@@ -87,7 +87,7 @@ class PopupWindow(QWidget):
         separator.setFrameShadow(QFrame.Shadow.Sunken)
         layout.addWidget(separator)
 
-        # 빠른 작업 버튼 (2행)
+        # 빠른 작업 버튼 (3행)
         quick_actions_1 = QHBoxLayout()
         quick_actions_1.setSpacing(8)
 
@@ -106,17 +106,27 @@ class PopupWindow(QWidget):
         quick_actions_2 = QHBoxLayout()
         quick_actions_2.setSpacing(8)
 
+        self.btn_professional = QPushButton("Professional")
+        self.btn_professional.setObjectName("quickActionButton")
+        self.btn_professional.clicked.connect(lambda: self._emit_action("professional"))
+        quick_actions_2.addWidget(self.btn_professional)
+
         self.btn_summarize = QPushButton("Summarize")
         self.btn_summarize.setObjectName("quickActionButton")
         self.btn_summarize.clicked.connect(lambda: self._emit_action("summarize"))
         quick_actions_2.addWidget(self.btn_summarize)
 
+        layout.addLayout(quick_actions_2)
+
+        quick_actions_3 = QHBoxLayout()
+        quick_actions_3.setSpacing(8)
+
         self.btn_translate = QPushButton("Translate")
         self.btn_translate.setObjectName("quickActionButton")
         self.btn_translate.clicked.connect(lambda: self._emit_action("translate"))
-        quick_actions_2.addWidget(self.btn_translate)
+        quick_actions_3.addWidget(self.btn_translate)
 
-        layout.addLayout(quick_actions_2)
+        layout.addLayout(quick_actions_3)
 
         # 구분선
         separator2 = QFrame()

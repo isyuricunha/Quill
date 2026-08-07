@@ -39,6 +39,7 @@ class QuillApp(QApplication):
     DEFAULT_ACTION_HOTKEYS = {
         "grammar_check": "<ctrl>+<alt>+g",
         "rewrite": "<ctrl>+<alt>+r",
+        "professional": "",
         "translate": "<ctrl>+<alt>+t",
     }
 
