@@ -1,154 +1,127 @@
-# 🪶 Quill - AI Writing Assistant for Windows
+<div align="center">
 
-**Quill** is a lightweight, background AI writing assistant for Windows. Select any text, press a hotkey, and let AI transform your writing instantly.
+# 🪶 Quill
 
-Inspired by [WritingTools](https://github.com/theJayTea/WritingTools), Quill offers deeper customization with ChatML prompt support and works with any OpenAI-compatible API.
+**System-wide AI writing assistance for Windows, powered by your own OpenAI-compatible API.**
 
-## ✨ What is Quill?
+[![Latest Release](https://img.shields.io/github/v/release/isyuricunha/Quill?display_name=tag&sort=semver)](../../releases/latest)
+[![Auto Release](https://github.com/isyuricunha/Quill/actions/workflows/release.yml/badge.svg)](../../actions/workflows/release.yml)
+[![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?logo=windows&logoColor=white)](#requirements)
+[![License](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
-Quill runs quietly in your system tray, ready to help whenever you need it. Whether you're writing emails, coding, or drafting documents, Quill can:
+Select text anywhere, press a hotkey, choose an action, and Quill replaces the selection with the AI result.
 
-- **Fix grammar and spelling** - Clean up your text instantly
-- **Rewrite content** - Make your writing clearer and more engaging
-- **Summarize text** - Get the key points from long content
-- **Translate** - Convert text to different languages
-- **Custom instructions** - Tell the AI exactly what you want
+[Download](../../releases/latest) · [Documentation](docs/README.md) · [Configuration](docs/configuration.md) · [Troubleshooting](docs/troubleshooting.md)
 
-**How it works:**
-1. Select any text in any application
-2. Press the hotkey (default: `Ctrl+Space`)
-3. Choose a quick action or type custom instructions
-4. Your selected text is automatically replaced with the AI response
+</div>
 
-## 🚀 Features
+## Why Quill?
 
-- **OAI Compatible API** - Works with OpenAI, Google Gemini, Ollama, llama.cpp, KoboldCPP, and more
-- **ChatML Prompt Format** - Advanced prompt customization with `<|im_start|>` tags
-- **Windows DPAPI Encryption** - Your API key is securely encrypted and bound to your Windows account
-- **Global Hotkey** - Works in any application
-- **Quick Repeat** - Instantly repeat last action with a single hotkey
-- **System Tray** - Runs quietly in the background
-- **Dark Theme** - Easy on the eyes
+Quill is a small Windows tray utility focused on one job: making selected text better without forcing you into a full AI chat application.
 
-## 📥 Download
+It works across applications through standard copy and paste behavior, connects to the OpenAI-compatible endpoint you choose, and stays out of the way until you call it.
 
-Download the latest release from [GitHub Releases](../../releases).
+### Highlights
 
-1. Download `Quill.zip` from the latest release
-2. Extract to any folder
-3. Run `Quill.exe`
+- **System-wide text actions** for selected text in Windows applications
+- **Grammar Check** for conservative grammar, spelling, and punctuation fixes
+- **Rewrite** for clearer, more natural writing while preserving your voice
+- **Professional** for polished, well-structured professional writing
+- **Summarize** for concise summaries that preserve important facts and caveats
+- **Translate** with a configurable target language
+- **Custom Instruction** for one-off transformations
+- **Direct action hotkeys** for Grammar Check, Rewrite, Professional, and Translate
+- **Quick Repeat** to reuse the last action without reopening the popup
+- **Per-prompt model override** while keeping a global default model
+- **Editable ChatML prompts** with `{{text}}` and `{{instruction}}` variables
+- **OpenAI-compatible APIs** including hosted, local, and proxy endpoints
+- **Windows DPAPI encryption** for the stored API key
+- **Start with Windows** using a per-user startup entry
+- **Built-in updater** backed by this repository's GitHub Releases
+- **Installer and portable builds** with separate, well-defined data locations
+- **Automatic releases** with unit tests and a packaged executable smoke test
 
-## ⚡ Quick Start
+## Download
 
-### First Run Setup
+Go to the [latest release](../../releases/latest) and choose one of the Windows x64 builds:
 
-On first launch, you'll see the onboarding window:
+| Build | File | Best for |
+| --- | --- | --- |
+| Installer | `Quill-vX.Y.Z-setup-windows-x64.exe` | Normal desktop use, Start Menu integration, in-app installer updates |
+| Portable | `Quill-vX.Y.Z-portable-windows-x64.zip` | Keeping Quill self-contained or moving it between folders |
 
-1. **Base URL** - Enter your API endpoint
-2. **API Key** - Enter your API key (stored encrypted)
-3. **Model** - Enter the model name
+The installer is per-user, installs under `%LOCALAPPDATA%\Programs\Quill`, and does not require administrator privileges.
 
-### API Configuration Examples
+## Quick start
 
-| Provider | Base URL | Model |
-|----------|----------|-------|
-| OpenAI | `https://api.openai.com/v1` | `gpt-5.1-2025-11-13` |
-| Google Gemini | `https://generativelanguage.googleapis.com/v1beta/openai/` | `gemini-2.0-flash` |
-| Ollama | `http://localhost:11434/v1` | `gemma3` |
-| llama.cpp | `http://localhost:8080/v1` | (your loaded model) |
+1. Install Quill or extract the portable ZIP.
+2. Run `Quill.exe`.
+3. Enter your **Base URL**, **API Key** if required, and **Model**.
+4. Select text in another application.
+5. Press `Ctrl+Space`.
+6. Choose an action.
+7. Quill replaces the selected text with the result.
 
-## 📖 Usage
+For custom instructions, type the instruction in the popup and press `Enter`. Use `Shift+Enter` for a new line.
 
-### Basic Workflow
+See [Getting Started](docs/getting-started.md) for the full walkthrough.
 
-1. **Select text** in any application
-2. **Press hotkey** (default: `Ctrl+Space`)
-3. **Choose action:**
-   - Click a quick action button (Grammar, Rewrite, Summarize, Translate)
-   - Or type custom instructions and press `Ctrl+Enter`
-4. **Done!** Selected text is replaced with AI response
+## Built-in actions
 
-### Quick Actions
+| Action | Default temperature | Behavior |
+| --- | ---: | --- |
+| Grammar Check | `0.3` | Corrects clear grammar, spelling, punctuation, and typographical errors while preserving tone and style |
+| Rewrite | `0.5` | Improves clarity, readability, naturalness, and flow without unnecessarily formalizing the text |
+| Professional | `0.4` | Reworks text into polished professional writing while preserving facts, intent, nuance, and certainty |
+| Summarize | `0.3` | Produces concise continuous prose without inventing or inferring missing information |
+| Translate | `0.3` | Produces a natural translation into the configured target language |
+| Custom | `0.7` | Applies the instruction you provide to the selected text |
 
-| Action | Description | Temperature |
-|--------|-------------|-------------|
-| Grammar Check | Fix spelling and grammar errors | 0.3 |
-| Rewrite | Make text clearer and more engaging | 0.7 |
-| Summarize | Condense to key points | 0.5 |
-| Translate | Translate to another language (specify in instruction) | 0.3 |
+Every prompt can be edited from **Settings > Prompts**, including its temperature, template, and optional model override.
 
-### ⌨️ Keyboard Shortcuts
+More detail: [Actions and Prompts](docs/actions-and-prompts.md).
 
-- `Ctrl+Space` - Open Quill popup (customizable)
-- `Ctrl+Shift+Space` - Quick Repeat: repeat last action without popup (customizable)
-- `Ctrl+Enter` - Send custom instruction
-- `Esc` - Close popup
+## Hotkeys
 
-### System Tray Menu
+| Purpose | Default |
+| --- | --- |
+| Open Quill popup | `Ctrl+Space` |
+| Quick Repeat | `Ctrl+Shift+Space` |
+| Grammar Check directly | `Ctrl+Alt+G` |
+| Rewrite directly | `Ctrl+Alt+R` |
+| Professional directly | Disabled by default |
+| Translate directly | `Ctrl+Alt+T` |
 
-Right-click the tray icon for options:
-- **Settings** - Configure API, hotkey, and prompts
-- **Pause/Resume** - Temporarily disable hotkey
-- **Quit** - Exit Quill
+All direct action hotkeys are optional and configurable. A direct action processes the selected text immediately without showing the popup.
 
-## 📁 Project Structure
+More detail: [Hotkeys](docs/hotkeys.md).
 
-```
-Quill/
-├── main.py                    # Entry point
-├── build.py                   # PyInstaller build script
-├── requirements.txt           # Dependencies
-│
-├── app/                       # Application logic
-│   ├── application.py         # Main QuillApp class
-│   ├── hotkey_manager.py      # Global hotkey handling
-│   ├── text_processor.py      # Text extraction/replacement
-│   └── tray_manager.py        # System tray icon
-│
-├── core/                      # Core modules
-│   ├── ai_provider.py         # OAI Compatible API client
-│   ├── config_manager.py      # Settings management
-│   ├── crypto_manager.py      # Windows DPAPI encryption
-│   ├── prompt_manager.py      # Prompt templates
-│   ├── chatml_parser.py       # ChatML format parser
-│   └── single_instance.py     # Prevent multiple instances
-│
-├── ui/                        # User interface
-│   ├── styles.py              # Dark theme styles
-│   ├── onboarding_window.py   # First-run setup
-│   ├── settings_window.py     # Settings dialog
-│   └── popup_window.py        # Main interaction popup
-│
-├── resources/                 # Assets
-│   ├── default_prompts.json   # Default prompt templates
-│   └── icon.ico               # Application icon
-│
-└── data/                      # User data (not in repo)
-    └── config.json            # User configuration
+## Settings
+
+Quill organizes configuration into four tabs:
+
+- **General**: Start with Windows, translation target language, update checks
+- **API**: Base URL, API key, global model, additional JSON parameters
+- **Hotkey**: main hotkey, Quick Repeat, direct action hotkeys
+- **Prompts**: name, temperature, optional model override, ChatML template, reset to default
+
+The Translate target can be selected from common languages or typed manually.
+
+More detail: [Configuration](docs/configuration.md).
+
+## OpenAI-compatible API support
+
+Quill sends requests to the `/chat/completions` interface exposed by the Base URL you configure. This makes it suitable for many hosted and local OpenAI-compatible services, such as OpenAI, compatible gateways, Ollama, llama.cpp, and other servers that implement the same request shape.
+
+Example configuration:
+
+```text
+Base URL: http://localhost:11434/v1
+API Key:  optional for local servers
+Model:    your-model-name
 ```
 
-## ⚙️ Configuration
-
-### Settings Window
-
-Access via system tray → Settings:
-
-- **API Tab**
-  - Base URL - API endpoint
-  - API Key - Encrypted storage
-  - Model - Model name
-  - Additional Params - Extra API parameters (JSON)
-
-- **Hotkey Tab**
-  - Main Hotkey - Opens popup for action selection
-  - Quick Repeat - Repeats last action without popup (optional)
-
-- **Prompts Tab**
-  - Edit prompt names and temperatures
-
-### Additional Parameters
-
-You can pass extra parameters to the API:
+You can also provide additional request parameters as JSON:
 
 ```json
 {
@@ -157,73 +130,110 @@ You can pass extra parameters to the API:
 }
 ```
 
-## 🎨 Custom Prompts (ChatML)
+Use the dedicated global model field or per-prompt model override for `model`. Quill applies the selected model after Additional Params are merged.
 
-Edit `resources/default_prompts.json` to customize prompts:
+## Installed vs portable data
 
-```json
-{
-  "my_prompt": {
-    "name": "My Custom Prompt",
-    "template": "<|im_start|>system\nYou are a helpful assistant.\n<|im_end|>\n<|im_start|>user\n{{instruction}}\n\nText:\n{{text}}\n<|im_end|}",
-    "temperature": 0.7
-  }
-}
+Quill intentionally separates user data based on the build type:
+
+| Build | User data location |
+| --- | --- |
+| Installed | `%LOCALAPPDATA%\Quill` |
+| Portable | `data` beside `Quill.exe` |
+
+The main user files are:
+
+- `config.json`
+- `user_prompts.json`
+
+When upgrading from an older layout, Quill copies known legacy user files into the new location without deleting the originals and without overwriting an existing destination file.
+
+More detail: [Updates and Data](docs/updates-and-data.md).
+
+## Updates
+
+The tray menu contains **Check for Updates**.
+
+By default, Quill also checks GitHub Releases once shortly after startup. If the current version is already up to date, the automatic check stays quiet.
+
+- **Installed build**: Quill can download the new setup executable, start it, and close the running instance.
+- **Portable build**: Quill opens the release page so you can replace the portable files manually.
+
+More detail: [Updates and Data](docs/updates-and-data.md).
+
+## Security and privacy
+
+- The API key is encrypted with Windows DPAPI and tied to the Windows user context.
+- Selected text is sent only when you invoke an AI action, to the endpoint configured in Quill.
+- Quill temporarily uses the clipboard to copy the selection and paste the result, then restores the previous clipboard text.
+- Update checks contact GitHub Releases when performed manually or when startup checks are enabled.
+
+More detail: [Security and Privacy](docs/security-and-privacy.md).
+
+## Requirements
+
+- Windows 10 or Windows 11
+- 64-bit Windows for published builds
+- An OpenAI-compatible API endpoint
+- Internet access only if your configured endpoint or update checks require it
+
+## Documentation
+
+The full documentation lives in [`/docs`](docs/README.md):
+
+- [Getting Started](docs/getting-started.md)
+- [Configuration](docs/configuration.md)
+- [Actions and Prompts](docs/actions-and-prompts.md)
+- [Hotkeys](docs/hotkeys.md)
+- [Updates and Data](docs/updates-and-data.md)
+- [Security and Privacy](docs/security-and-privacy.md)
+- [Troubleshooting](docs/troubleshooting.md)
+- [Architecture](docs/architecture.md)
+- [Development](docs/development.md)
+- [Release Process](docs/release-process.md)
+
+## Development
+
+```powershell
+python -m pip install -r requirements.txt
+python main.py
 ```
 
-### Template Variables
+Run the test suite:
 
-- `{{text}}` - The selected text
-- `{{instruction}}` - User's custom instruction
+```powershell
+python -m compileall -q core app ui main.py
+python -m unittest discover -s tests -v
+```
 
-## 🔧 Troubleshooting
+Build the Windows application:
 
-### Hotkey not working
-
-1. Another app may be using the same hotkey - change in Settings
-2. Try running Quill as administrator (required for some apps)
-3. Check if Quill is paused (tray menu)
-
-### API errors
-
-1. Verify Base URL ends with `/v1` for OpenAI-compatible APIs
-2. Check API key is correct
-3. Ensure your API has sufficient credits/quota
-
-### Text not replaced
-
-1. Make sure text is actually selected
-2. Target app must support `Ctrl+V` paste
-3. Some apps (password managers) block clipboard access
-
-## 🛠️ Building from Source
-
-```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Run directly
-python main.py
-
-# Build executable
+```powershell
 python build.py
 ```
 
-## 🙏 Credits
+See [Development](docs/development.md) for build, test, packaging, and source layout details.
 
-- [WritingTools](https://github.com/theJayTea/WritingTools) - Inspiration
-- [PySide6](https://doc.qt.io/qtforpython-6/) - GUI framework
-- [pynput](https://github.com/moses-palmer/pynput) - Global hotkey
-- [pyperclip](https://github.com/asweigart/pyperclip) - Clipboard access
+## Independent maintenance
 
-## 📄 License
+This repository is maintained as an **independent fork** with its own roadmap, releases, Windows packaging, updater endpoint, tests, and release automation. Published builds and update checks are produced from `isyuricunha/Quill` and do not depend on an upstream release cadence.
 
-This project is licensed under the **GNU General Public License v3.0** (GPL-3.0).
+The original copyright notice and GPL terms remain preserved in [LICENSE](LICENSE).
 
-Copyright (c) 2026 ICSLI
+## Credits
 
-See [LICENSE](LICENSE) for details.
+Quill builds on the original Quill project and retains its licensing notice. The original project also cited [WritingTools](https://github.com/theJayTea/WritingTools) as an inspiration.
 
----
+Core technologies include [PySide6](https://doc.qt.io/qtforpython-6/), [pynput](https://github.com/moses-palmer/pynput), and [pyperclip](https://github.com/asweigart/pyperclip).
 
-**Quill** 🪶 - AI-powered writing assistant for Windows
+## License
+
+Quill is distributed under the **GNU General Public License v3.0 or later**. See [LICENSE](LICENSE).
+
+<div align="center">
+
+**Quill** 🪶
+
+Small, fast, system-wide AI writing assistance for Windows.
+
+</div>
