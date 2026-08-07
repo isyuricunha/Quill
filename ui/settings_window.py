@@ -10,10 +10,11 @@ from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
     QLineEdit, QPushButton, QGroupBox, QFormLayout,
     QMessageBox, QTabWidget, QWidget, QComboBox,
-    QTextEdit
+    QTextEdit, QCheckBox
 )
 from PySide6.QtCore import Signal
 
+from core.startup_manager import StartupManager
 from ui.styles import apply_dark_theme
 
 
@@ -95,6 +96,7 @@ class SettingsWindow(QDialog):
         self.config_manager = config_manager
         self.crypto_manager = crypto_manager
         self.prompt_manager = prompt_manager
+        self.startup_manager = StartupManager()
 
         self.setWindowTitle("Quill - Settings")
         self.setModal(True)
@@ -115,6 +117,10 @@ class SettingsWindow(QDialog):
 
         # 탭 위젯
         self.tabs = QTabWidget()
+
+        # 일반 설정 탭
+        general_tab = self._create_general_tab()
+        self.tabs.addTab(general_tab, "General")
 
         # API 설정 탭
         api_tab = self._create_api_tab()
@@ -148,6 +154,39 @@ class SettingsWindow(QDialog):
         layout.addLayout(button_layout)
 
         self.setLayout(layout)
+
+    def _create_general_tab(self):
+        """일반 설정 탭 생성"""
+        tab = QWidget()
+        layout = QVBoxLayout()
+        layout.setSpacing(16)
+
+        startup_group = QGroupBox("Windows Startup")
+        startup_layout = QVBoxLayout()
+        startup_layout.setSpacing(8)
+
+        self.checkbox_startup = QCheckBox("Start Quill with Windows")
+        startup_layout.addWidget(self.checkbox_startup)
+
+        startup_help = QLabel(
+            "Launch Quill automatically when you sign in to Windows."
+        )
+        startup_help.setObjectName("subtitleLabel")
+        startup_help.setWordWrap(True)
+        startup_layout.addWidget(startup_help)
+
+        if not self.startup_manager.is_supported():
+            self.checkbox_startup.setEnabled(False)
+            self.checkbox_startup.setToolTip(
+                "Windows startup is only available on Windows."
+            )
+
+        startup_group.setLayout(startup_layout)
+        layout.addWidget(startup_group)
+        layout.addStretch()
+
+        tab.setLayout(layout)
+        return tab
 
     def _create_api_tab(self):
         """API 설정 탭 생성"""
@@ -510,6 +549,10 @@ class SettingsWindow(QDialog):
         try:
             config = self.config_manager.get_all()
 
+            # 일반 설정
+            startup_enabled = self.config_manager.get("startup.enabled", False)
+            self.checkbox_startup.setChecked(bool(startup_enabled))
+
             # API 설정
             self.input_base_url.setText(
                 self.config_manager.get("api.base_url", "")
@@ -545,6 +588,10 @@ class SettingsWindow(QDialog):
 
     def _on_save(self):
         """저장 버튼 클릭 시"""
+        previous_startup_enabled = self.config_manager.get("startup.enabled", False)
+        requested_startup_enabled = self.checkbox_startup.isChecked()
+        startup_changed = False
+
         try:
             # 프롬프트 저장 (Prompts 탭이 있는 경우)
             if self.prompt_manager and not self._save_current_prompt():
@@ -651,8 +698,50 @@ class SettingsWindow(QDialog):
 
             self.config_manager.set("hotkey.quick_key", quick_hotkey)
 
+            # Windows 시작 프로그램 설정
+            if self.startup_manager.is_supported():
+                try:
+                    self.startup_manager.set_enabled(requested_startup_enabled)
+                    startup_changed = (
+                        requested_startup_enabled != previous_startup_enabled
+                    )
+                except Exception as e:
+                    logger.error(f"Error updating Windows startup: {e}")
+                    try:
+                        self.config_manager.load()
+                    except Exception:
+                        logger.exception("Failed to reload configuration after startup error")
+
+                    self.checkbox_startup.setChecked(previous_startup_enabled)
+                    QMessageBox.critical(
+                        self,
+                        "Windows Startup Error",
+                        f"Failed to update Windows startup:\n\n{e}\n\n"
+                        "Your startup preference was not changed."
+                    )
+                    return
+
+                self.config_manager.set(
+                    "startup.enabled", requested_startup_enabled
+                )
+
             # 파일에 저장
-            self.config_manager.save()
+            try:
+                self.config_manager.save()
+            except Exception:
+                if self.startup_manager.is_supported() and startup_changed:
+                    try:
+                        self.startup_manager.set_enabled(previous_startup_enabled)
+                    except Exception:
+                        logger.exception(
+                            "Failed to roll back Windows startup after config save error"
+                        )
+
+                try:
+                    self.config_manager.load()
+                except Exception:
+                    logger.exception("Failed to reload configuration after save error")
+                raise
 
             logger.info("Settings saved successfully")
 
