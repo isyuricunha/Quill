@@ -1,17 +1,35 @@
 """
 Bragi build script.
 
-Builds the Windows onedir application with PyInstaller and prepares a
-classic ICO for Inno Setup from the application's selected icon artwork.
+Builds the Windows onedir application with PyInstaller. The selected Bragi
+artwork is kept as a canonical PNG and converted into the Windows icon formats
+needed by PyInstaller, the packaged runtime, and Inno Setup.
 """
 
-import io
 import os
 import shutil
 import struct
 import subprocess
 import sys
 from pathlib import Path
+
+
+ICON_SOURCE = Path("resources") / "icon_source.png"
+BUILD_ICON = Path("build") / "icon.ico"
+BUILD_ICON_ALPHA = Path("build") / "icon_alpha.ico"
+SETUP_ICON = Path("build") / "setup_icon.ico"
+ICON_SIZES = (
+    (16, 16),
+    (20, 20),
+    (24, 24),
+    (32, 32),
+    (40, 40),
+    (48, 48),
+    (64, 64),
+    (96, 96),
+    (128, 128),
+    (256, 256),
+)
 
 
 def clean_build_files():
@@ -52,6 +70,23 @@ def check_requirements():
             print(f"  {package_name} installed successfully!")
 
 
+def prepare_app_icons():
+    """Generate valid runtime ICO files from the canonical PNG artwork."""
+    from PIL import Image
+
+    if not ICON_SOURCE.exists():
+        raise FileNotFoundError(f"Canonical icon source not found: {ICON_SOURCE}")
+
+    BUILD_ICON.parent.mkdir(parents=True, exist_ok=True)
+
+    with Image.open(ICON_SOURCE) as source:
+        image = source.convert("RGBA")
+        image.save(BUILD_ICON, format="ICO", sizes=list(ICON_SIZES))
+        image.save(BUILD_ICON_ALPHA, format="ICO", sizes=list(ICON_SIZES))
+
+    print(f"\nPrepared application icon: {BUILD_ICON}")
+
+
 def build_exe():
     print("\nBuilding Bragi.exe...")
 
@@ -61,11 +96,12 @@ def build_exe():
         "--windowed",
         "--name=Bragi",
         "--clean",
-        "--icon=resources/icon.ico",
+        f"--icon={BUILD_ICON}",
         "--add-data=resources/default_prompts.json;resources",
         "--add-data=resources/version.txt;resources",
-        "--add-data=resources/icon.ico;resources",
-        "--add-data=resources/icon_alpha.ico;resources",
+        "--add-data=resources/icon_source.png;resources",
+        f"--add-data={BUILD_ICON};resources",
+        f"--add-data={BUILD_ICON_ALPHA};resources",
         "--collect-submodules=core",
         "--collect-submodules=app",
         "--collect-submodules=ui",
@@ -85,7 +121,7 @@ def build_exe():
     ]
 
     print("\nRunning PyInstaller...")
-    print(" ".join(cmd))
+    print(" ".join(str(part) for part in cmd))
     print()
 
     result = subprocess.run(cmd)
@@ -158,67 +194,16 @@ def _encode_classic_icon_frame(image):
     return bitmap_header + bytes(xor_bitmap) + bytes(and_mask)
 
 
-def _load_largest_png_icon_frame(icon_path):
-    """Extract the largest PNG-backed frame from an ICO without Pillow's ICO parser."""
-    from PIL import Image
-
-    data = Path(icon_path).read_bytes()
-    if len(data) < 6:
-        raise ValueError(f"Icon file is too small: {icon_path}")
-
-    reserved, icon_type, count = struct.unpack_from("<HHH", data, 0)
-    if reserved != 0 or icon_type != 1 or count < 1:
-        raise ValueError(f"Invalid ICO header: {icon_path}")
-
-    best = None
-    for index in range(count):
-        entry_offset = 6 + (index * 16)
-        if entry_offset + 16 > len(data):
-            raise ValueError(f"Truncated ICO directory: {icon_path}")
-
-        width_byte, height_byte, _, _, _, _, size, offset = struct.unpack_from(
-            "<BBBBHHII", data, entry_offset
-        )
-        width = width_byte or 256
-        height = height_byte or 256
-        end = offset + size
-        if offset < 0 or size <= 0 or end > len(data):
-            continue
-
-        payload = data[offset:end]
-        if not payload.startswith(b"\x89PNG\r\n\x1a\n"):
-            continue
-
-        score = width * height
-        if best is None or score > best[0]:
-            best = (score, width, height, payload)
-
-    if best is None:
-        raise ValueError(f"No PNG-backed frame found in icon: {icon_path}")
-
-    _, width, height, payload = best
-    with Image.open(io.BytesIO(payload)) as frame:
-        image = frame.convert("RGBA")
-        image.load()
-
-    print(f"  Extracted source icon frame: {width}x{height}")
-    return image
-
-
 def prepare_installer_icon():
-    """Create an Inno-compatible ICO without changing the app's icon artwork."""
+    """Create an Inno-compatible ICO from the same canonical artwork."""
     from PIL import Image
 
-    source_path = Path("resources") / "icon.ico"
-    output_path = Path("build") / "setup_icon.ico"
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    source = _load_largest_png_icon_frame(source_path)
-    sizes = (16, 32, 48, 64, 128, 256)
-    frames = []
-    for size in sizes:
-        resized = source.resize((size, size), Image.Resampling.LANCZOS)
-        frames.append((size, _encode_classic_icon_frame(resized)))
+    with Image.open(ICON_SOURCE) as source:
+        source = source.convert("RGBA")
+        frames = []
+        for size in (16, 32, 48, 64, 128, 256):
+            resized = source.resize((size, size), Image.Resampling.LANCZOS)
+            frames.append((size, _encode_classic_icon_frame(resized)))
 
     offset = 6 + (16 * len(frames))
     directory_entries = []
@@ -244,8 +229,8 @@ def prepare_installer_icon():
         + b"".join(directory_entries)
         + b"".join(payload for _, payload in frames)
     )
-    output_path.write_bytes(icon_data)
-    print(f"\nPrepared Inno Setup icon: {output_path} ({len(icon_data)} bytes)")
+    SETUP_ICON.write_bytes(icon_data)
+    print(f"Prepared Inno Setup icon: {SETUP_ICON} ({len(icon_data)} bytes)")
 
 
 def main():
@@ -265,6 +250,7 @@ def main():
 
     clean_build_files()
     check_requirements()
+    prepare_app_icons()
     success = build_exe()
 
     if success:
