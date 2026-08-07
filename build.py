@@ -29,16 +29,24 @@ def clean_build_files():
 
 
 def check_requirements():
-    print("\nChecking requirements...")
+    print("\nChecking build requirements...")
 
-    try:
-        import PyInstaller  # noqa: F401
-        print("  PyInstaller: OK")
-    except ImportError:
-        print("  PyInstaller: NOT FOUND")
-        print("\nInstalling PyInstaller...")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "pyinstaller"])
-        print("  PyInstaller installed successfully!")
+    requirements = [
+        ("PyInstaller", "pyinstaller"),
+        ("PIL", "pillow"),
+    ]
+
+    for import_name, package_name in requirements:
+        try:
+            __import__(import_name)
+            print(f"  {package_name}: OK")
+        except ImportError:
+            print(f"  {package_name}: NOT FOUND")
+            print(f"\nInstalling {package_name}...")
+            subprocess.check_call(
+                [sys.executable, "-m", "pip", "install", package_name]
+            )
+            print(f"  {package_name} installed successfully!")
 
 
 def build_exe():
