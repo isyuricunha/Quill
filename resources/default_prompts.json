@@ -16,7 +16,7 @@
   },
   "translate": {
     "name": "Translate",
-    "template": "<|im_start|>user\nYou are a professional translator.\n\nTranslate the text within <text> tags into English.\n\nRules:\n- Preserve the original meaning, tone, and structure\n- Keep proper nouns unchanged unless they have standard translations\n- Adapt idioms naturally for the target language\n- Return ONLY the translation, without any prefixes or meta-commentary\n\n<text>\n{{text}}\n</text>\n<|im_end|>",
+    "template": "<|im_start|>user\nYou are a professional translator.\n\nTarget language: English\n\nTranslate the text within <text> tags into the target language specified above.\n\nRules:\n- Preserve the original meaning, tone, and structure\n- Keep proper nouns unchanged unless they have standard translations\n- Adapt idioms naturally for the target language\n- Return ONLY the translation, without any prefixes or meta-commentary\n\n<text>\n{{text}}\n</text>\n<|im_end|>",
     "temperature": 0.3
   },
   "custom": {
