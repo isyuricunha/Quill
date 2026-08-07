@@ -1,4 +1,4 @@
-"""Windows system tray manager for Quill."""
+"""Windows system tray manager for Bragi."""
 
 import logging
 import threading
@@ -54,13 +54,13 @@ class TrayManager(QObject):
 
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.setBrush(QColor("#007ACC"))
+        painter.setBrush(QColor("#C99432"))
         painter.setPen(Qt.PenStyle.NoPen)
         painter.drawEllipse(2, 2, 28, 28)
 
-        painter.setPen(QColor("#FFFFFF"))
+        painter.setPen(QColor("#111111"))
         painter.setFont(QFont("Arial", 16, QFont.Weight.Bold))
-        painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "Q")
+        painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "B")
         painter.end()
 
         return QIcon(pixmap)
@@ -93,7 +93,7 @@ class TrayManager(QObject):
 
         self.tray_icon = QSystemTrayIcon(icon)
         self.tray_icon.setToolTip(
-            f"Quill {self.update_manager.current_version} - AI Writing Assistant"
+            f"Bragi {self.update_manager.current_version} - AI Writing Assistant"
         )
 
         self._create_menu()
@@ -153,7 +153,7 @@ class TrayManager(QObject):
         """Check GitHub Releases without blocking the UI thread."""
         if self._update_operation_in_progress:
             if manual:
-                self.show_message("Quill Update", "An update operation is already running.")
+                self.show_message("Bragi Update", "An update operation is already running.")
             return
 
         self._update_operation_in_progress = True
@@ -191,8 +191,8 @@ class TrayManager(QObject):
             if manual:
                 QMessageBox.information(
                     None,
-                    "Quill is Up to Date",
-                    f"Quill v{info['current_version']} is the latest version.",
+                    "Bragi is Up to Date",
+                    f"Bragi v{info['current_version']} is the latest version.",
                 )
             return
 
@@ -200,8 +200,8 @@ class TrayManager(QObject):
 
         if not manual:
             self.show_message(
-                f"Quill v{latest} available",
-                "Right-click Quill and choose Check for Updates to update.",
+                f"Bragi v{latest} available",
+                "Right-click Bragi and choose Check for Updates to update.",
             )
             return
 
@@ -209,7 +209,7 @@ class TrayManager(QObject):
             reply = QMessageBox.question(
                 None,
                 "Update Available",
-                f"Quill v{latest} is available.\n\n"
+                f"Bragi v{latest} is available.\n\n"
                 f"Current version: v{info['current_version']}\n\n"
                 "Download and start the installer now?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
@@ -221,7 +221,7 @@ class TrayManager(QObject):
         reply = QMessageBox.question(
             None,
             "Update Available",
-            f"Quill v{latest} is available.\n\n"
+            f"Bragi v{latest} is available.\n\n"
             f"Current version: v{info['current_version']}\n\n"
             "This appears to be a portable build. Open the release page?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
@@ -235,8 +235,8 @@ class TrayManager(QObject):
             self.action_check_updates.setEnabled(False)
 
         self.show_message(
-            "Quill Update",
-            f"Downloading Quill v{info['latest_version']}...",
+            "Bragi Update",
+            f"Downloading Bragi v{info['latest_version']}...",
         )
 
         def worker():

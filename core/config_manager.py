@@ -43,8 +43,8 @@ class ConfigManager:
 
         Args:
             config_path: Explicit config file path. When omitted, installed builds
-                use %LOCALAPPDATA%/Quill/config.json and portable builds use
-                ./data/config.json beside Quill.exe.
+                use %LOCALAPPDATA%/Bragi/config.json and portable builds use
+                ./data/config.json beside Bragi.exe.
         """
         if config_path is None:
             config_path = get_user_data_dir() / "config.json"

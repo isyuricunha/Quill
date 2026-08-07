@@ -1,5 +1,5 @@
 """
-Quill build script.
+Bragi build script.
 
 Builds the Windows onedir application with PyInstaller.
 """
@@ -19,9 +19,13 @@ def clean_build_files():
             shutil.rmtree(dir_name)
             print(f"  Removed {dir_name}/")
 
+    if os.path.exists("Bragi.spec"):
+        os.remove("Bragi.spec")
+        print("  Removed Bragi.spec")
+
     if os.path.exists("Quill.spec"):
         os.remove("Quill.spec")
-        print("  Removed Quill.spec")
+        print("  Removed legacy Quill.spec")
 
 
 def check_requirements():
@@ -38,21 +42,19 @@ def check_requirements():
 
 
 def build_exe():
-    print("\nBuilding Quill.exe...")
+    print("\nBuilding Bragi.exe...")
 
     cmd = [
         "pyinstaller",
         "--onedir",
         "--windowed",
-        "--name=Quill",
+        "--name=Bragi",
         "--clean",
         "--icon=resources/icon.ico",
         "--add-data=resources/default_prompts.json;resources",
         "--add-data=resources/version.txt;resources",
         "--add-data=resources/icon.ico;resources",
         "--add-data=resources/icon_alpha.ico;resources",
-        # Explicitly collect Quill's internal packages. PyInstaller normally
-        # discovers these imports, but releases must not depend on that heuristic.
         "--collect-submodules=core",
         "--collect-submodules=app",
         "--collect-submodules=ui",
@@ -87,8 +89,8 @@ def build_exe():
     print("Build completed successfully!")
     print("=" * 50)
 
-    dist_folder = Path("dist") / "Quill"
-    exe_path = dist_folder / "Quill.exe"
+    dist_folder = Path("dist") / "Bragi"
+    exe_path = dist_folder / "Bragi.exe"
     if exe_path.exists():
         total_size = sum(
             f.stat().st_size for f in dist_folder.rglob("*") if f.is_file()
@@ -99,8 +101,8 @@ def build_exe():
 
         print("\n" + "-" * 50)
         print("How to use:")
-        print("  1. Copy the entire 'dist/Quill' folder to your desired location")
-        print("  2. Run Quill.exe inside the folder")
+        print("  1. Copy the entire 'dist/Bragi' folder to your desired location")
+        print("  2. Run Bragi.exe inside the folder")
         print("  3. Configure API settings on first run")
         print("  4. Press Ctrl+Space to activate!")
         print("-" * 50)
@@ -110,12 +112,12 @@ def build_exe():
 
 def main():
     print("=" * 50)
-    print("Quill Build Script")
+    print("Bragi Build Script")
     print("=" * 50)
 
     if not Path("main.py").exists():
         print("\nError: main.py not found!")
-        print("Please run this script from the Quill root directory.")
+        print("Please run this script from the Bragi root directory.")
         sys.exit(1)
 
     version_file = Path("resources/version.txt")

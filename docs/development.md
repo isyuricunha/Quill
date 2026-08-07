@@ -1,289 +1,103 @@
 # Development
 
-This document covers local development, tests, Windows packaging, and the source layout for Quill.
+Bragi is a Python 3 / PySide6 Windows desktop utility.
 
-## Environment
+## Local setup
 
-Published releases are built on GitHub Actions using:
-
-```text
-Windows latest
-Python 3.12
-```
-
-Using Python 3.12 locally is recommended when reproducing release behavior.
-
-## Clone
+From the repository root:
 
 ```powershell
-git clone https://github.com/isyuricunha/Quill.git
-cd Quill
-```
-
-## Install dependencies
-
-```powershell
-python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
-```
-
-Main runtime dependencies include:
-
-- PySide6
-- pynput
-- pyperclip
-- cryptography
-- httpx
-- darkdetect
-
-## Run from source
-
-```powershell
 python main.py
 ```
 
-Development mode keeps user data in:
+For release-style builds, install PyInstaller as well:
 
-```text
-<repository>\data
+```powershell
+python -m pip install pyinstaller
 ```
 
-The Start with Windows feature, when used from source, stores a command that launches `main.py` through the current Python executable.
+## Tests
 
-## Source compilation check
-
-The release workflow first verifies that the Python source can compile:
+Compile all application sources first:
 
 ```powershell
 python -m compileall -q core app ui main.py
 ```
 
-Treat any non-zero result as a release blocker.
+Run unit tests:
 
-## Unit tests
+```powershell
+python -m unittest discover -s tests -v
+```
+
+The release workflow runs both commands before it attempts packaging.
+
+## Build
 
 Run:
 
 ```powershell
-python -m unittest discover -s tests -v
-```
-
-Current tests cover important behavior such as:
-
-- installed and portable paths
-- legacy data migration
-- update-version behavior
-- optional per-prompt model overrides
-- prompt migration and safe ChatML substitution
-- Professional prompt registration and optional hotkey behavior
-
-New features should include focused tests whenever their logic can be exercised without driving the full GUI.
-
-## Build the Windows application
-
-Install runtime requirements first, then run:
-
-```powershell
 python build.py
 ```
 
-`build.py` installs PyInstaller automatically if it is not already available.
-
-The build output is:
+The build script uses PyInstaller `--onedir` and produces:
 
 ```text
-dist\Quill\
+dist\Bragi\Bragi.exe
 ```
 
-The executable is:
-
-```text
-dist\Quill\Quill.exe
-```
-
-Quill uses a PyInstaller `onedir` build, so the entire `dist\Quill` directory is required.
-
-## PyInstaller configuration
-
-The build script includes:
-
-```text
---onedir
---windowed
---name=Quill
---clean
-```
-
-It bundles:
+Runtime resources are bundled under the generated application directory, including:
 
 - default prompts
 - embedded version file
-- application icons
+- Windows icon assets
 
-It explicitly collects internal packages:
+Core, app and UI submodules are explicitly collected rather than relying only on PyInstaller import discovery.
 
-```text
-core
-app
-ui
-```
+## Smoke test
 
-It also explicitly includes `core.prompt_manager` and the required PySide6 modules.
-
-This explicit collection exists to prevent a build from succeeding while silently omitting an internal module.
-
-## Packaged executable smoke test
-
-Published releases run:
+A packaged build supports:
 
 ```powershell
-dist\Quill\Quill.exe --smoke-test
+dist\Bragi\Bragi.exe --smoke-test
 ```
 
-The release workflow waits for the process and rejects the release if the smoke test returns a non-zero exit code.
+This imports critical packaged modules and exits. GitHub Actions runs this check before creating release artifacts.
 
-This is important because a source test can pass even when PyInstaller packaging is incomplete.
+## Installer
 
-## Build the installer locally
+`installer.iss` is the Inno Setup definition. The published installer is per-user and requires no administrator privileges.
 
-The installer definition is:
-
-```text
-installer.iss
-```
-
-It requires Inno Setup.
-
-The release workflow invokes `ISCC.exe` with an application version define equivalent to:
+To compile manually, install Inno Setup and pass an application version:
 
 ```powershell
-ISCC.exe /DAppVersion=1.2.3 installer.iss
+ISCC.exe /DAppVersion=2.0.0 installer.iss
 ```
 
-The resulting setup file is placed under:
+The result is written under `installer-output` as:
 
 ```text
-installer-output\Quill-v1.2.3-setup-windows-x64.exe
+Bragi-v2.0.0-setup-windows-x64.exe
 ```
 
-The installer is configured as:
-
-- per-user
-- no administrator privileges required
-- x64-compatible
-- installed under `%LOCALAPPDATA%\Programs\Quill`
-
-## Portable package
-
-The portable release is a ZIP of the complete `dist\Quill` directory contents.
-
-Published filename:
-
-```text
-Quill-vX.Y.Z-portable-windows-x64.zip
-```
+The Inno `AppId` intentionally remains the historical Quill value. Do not casually change it: it is what allows Bragi to upgrade an existing installed Quill copy instead of creating a second independent Windows installation.
 
 ## Project layout
 
 ```text
-Quill/
-├── .github/
-│   └── workflows/
-│       └── release.yml
-├── app/
-│   ├── application.py
-│   ├── hotkey_manager.py
-│   ├── text_processor.py
-│   └── tray_manager.py
-├── core/
-│   ├── ai_provider.py
-│   ├── app_paths.py
-│   ├── chatml_parser.py
-│   ├── config_manager.py
-│   ├── crypto_manager.py
-│   ├── hotkey_defaults.py
-│   ├── prompt_manager.py
-│   ├── startup_manager.py
-│   └── update_manager.py
-├── docs/
-├── resources/
-│   ├── default_prompts.json
-│   ├── version.txt
-│   ├── icon.ico
-│   └── icon_alpha.ico
-├── tests/
-├── ui/
-│   ├── direct_hotkey_settings.py
-│   ├── onboarding_window.py
-│   ├── popup_window.py
-│   ├── settings_window.py
-│   └── styles.py
-├── build.py
-├── installer.iss
-├── main.py
-└── requirements.txt
+app/          application orchestration, hotkeys, selection and tray
+core/         API, paths, prompts, crypto, updater and persistence
+ui/           popup, onboarding, settings and theme
+resources/    prompts, icons and embedded version
+tests/        unit tests
+docs/         maintained project documentation
 ```
 
-## User-data paths during development
+## Branding compatibility
 
-Non-frozen development runs are treated like portable mode for user-data storage:
+Current branding belongs in `core/brand.py` when it is needed by runtime compatibility code. Legacy `Quill` strings should remain only where they are intentionally required for migration, old repository redirects, historical installer identity or project lineage.
 
-```text
-<repository>\data\config.json
-<repository>\data\user_prompts.json
-```
+## Release changes
 
-The `data` directory is runtime data, not application source.
-
-## Prompt development
-
-Bundled prompts are defined in:
-
-```text
-resources/default_prompts.json
-```
-
-When editing a prompt, preserve the intended distinction between system instructions and user data.
-
-The current parser supports:
-
-```text
-{{text}}
-{{instruction}}
-```
-
-ChatML is parsed before those variables are inserted.
-
-See [Actions and Prompts](actions-and-prompts.md).
-
-## Release-safe commit strategy
-
-The Auto Release workflow runs on every push to `main`.
-
-Because `feat:`, `fix:`, `perf:`, and `refactor:` commits can create releases, multi-file features should preferably land as one atomic commit when possible.
-
-Documentation-only work should use `docs:` so the workflow can validate the repository without publishing a new version.
-
-See [Release Process](release-process.md).
-
-## Before pushing a code change
-
-Recommended minimum local checks:
-
-```powershell
-python -m compileall -q core app ui main.py
-python -m unittest discover -s tests -v
-```
-
-For packaging changes also run:
-
-```powershell
-python build.py
-dist\Quill\Quill.exe --smoke-test
-```
-
-## Coding direction
-
-Quill is intentionally focused.
-
-Prefer changes that improve selected-text writing workflows, reliability, configuration, prompts, packaging, or Windows integration without turning the application into a general-purpose AI chat client.
+Use Conventional Commit messages. See [Release Process](release-process.md) before changing release automation or artifact naming.

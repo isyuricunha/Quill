@@ -1,4 +1,4 @@
-"""Prompt template management for Quill."""
+"""Prompt template management for Bragi."""
 
 import json
 import logging

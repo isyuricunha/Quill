@@ -1,157 +1,59 @@
 # Security and Privacy
 
-Quill is a local Windows utility that sends selected text to the OpenAI-compatible API endpoint configured by the user.
-
-This page describes the main trust boundaries and local storage behavior visible in the current codebase.
+Bragi is a local Windows utility that sends selected text to the OpenAI-compatible endpoint configured by the user.
 
 ## API key storage
 
-Quill encrypts the API key with Windows DPAPI before writing it to `config.json`.
+API keys are encrypted with Windows DPAPI before being written to `config.json`.
 
-The implementation uses Windows `CryptProtectData` and `CryptUnprotectData`.
+DPAPI binds protected data to the Windows user context. Bragi does not store the plaintext key in its configuration file.
 
-The encrypted value is stored as Base64 text in:
+The encrypted key can still be migrated from the previous Quill data folder because the protection is tied to the Windows account rather than the application name.
 
-```text
-api.api_key_encrypted
-```
+## Selected text
 
-DPAPI ties decryption to the Windows security context. As a result, copying an encrypted `config.json` to another Windows account or machine can make the stored key unusable there.
+Bragi does not continuously read everything you type. Text is processed when you explicitly invoke an action.
 
-If that happens, open Settings and enter the API key again.
-
-## Selected text and API requests
-
-Quill only processes text when an action is invoked.
-
-The high-level flow is:
-
-1. capture the current text selection
-2. render the selected prompt
-3. send the rendered chat messages to the configured API endpoint
-4. receive the model response
-5. replace the original selection
-
-The content you select can therefore be transmitted to the API provider or local server you configured.
-
-Choose an endpoint whose privacy and data-handling policies are appropriate for the text you process.
+The selected text, prompt instructions and configured request parameters are sent to the API endpoint you configured. The privacy policy and retention behavior of that endpoint are outside Bragi's control.
 
 ## Clipboard behavior
 
-Quill uses the Windows clipboard as part of text capture and replacement.
+To work across many Windows applications, Bragi uses the standard clipboard workflow:
 
-### Capture
+1. backs up the current clipboard text
+2. simulates `Ctrl+C` to obtain the selection
+3. restores the previous clipboard text
+4. after receiving an AI response, temporarily places the response on the clipboard
+5. simulates `Ctrl+V`
+6. restores the previous clipboard text again
 
-Quill:
+Applications that block clipboard access or standard copy/paste may not work with this mechanism.
 
-1. saves the current clipboard text
-2. writes an internal marker
-3. simulates `Ctrl+C`
-4. reads the copied selection
-5. restores the previous clipboard text
+## Prompt boundaries
 
-### Replacement
+Bragi parses the ChatML message structure before inserting selected text. The selected text is substituted into the already parsed message content rather than being allowed to create new ChatML messages.
 
-Quill:
+This reduces the chance that literal control-marker text inside a selection alters the message hierarchy.
 
-1. saves the current clipboard text
-2. puts the AI result on the clipboard
-3. simulates `Ctrl+V`
-4. restores the previous clipboard text
+## Network requests
 
-This is designed to preserve normal clipboard contents during typical use.
+Bragi makes network requests in two situations:
 
-Clipboard managers, target applications, security software, or unusually slow paste handling can still observe or affect this sequence.
+- AI actions, to the configured OpenAI-compatible endpoint
+- update checks, to the project's GitHub Releases endpoint
 
-## Prompt injection boundaries
+Startup update checks can be disabled in Settings.
 
-Quill's ChatML parser parses message roles before inserting selected text and custom instruction values.
+## Update downloads
 
-This matters because selected text can contain strings that resemble ChatML tokens such as:
+Installed updates are accepted only from expected GitHub Release download paths for the project. The installer is downloaded to a temporary Bragi update directory and launched only after the user confirms the update.
 
-```text
-<|im_start|>system
-```
+## Local files
 
-Those strings remain ordinary message content instead of being parsed as additional system messages.
+Installed user data is stored under `%LOCALAPPDATA%\Bragi`. Portable user data is stored in `data` beside `Bragi.exe`.
 
-Prompt variable substitution is also single-pass, so text containing another placeholder such as `{{instruction}}` is not recursively substituted.
+During migration from Quill, Bragi copies known configuration files but intentionally does not delete the originals.
 
-The default prompts additionally instruct the model to treat `<text>` content as data rather than instructions.
+## Trust model
 
-These measures improve prompt separation, but they do not make language-model output a security boundary. Review model output before using it in sensitive workflows.
-
-## Update checks
-
-Quill's updater contacts the GitHub API for:
-
-```text
-isyuricunha/Quill
-```
-
-Update checks happen when:
-
-- you choose **Check for Updates** from the tray menu
-- the startup update option is enabled and Quill performs its one scheduled startup check
-
-The installer downloader only accepts setup download URLs that begin with this repository's GitHub Releases download path.
-
-## Installed update downloads
-
-When you approve an installed update, the setup executable is downloaded to a Quill updates directory inside the user's temporary directory.
-
-Quill checks that the file exists and is non-empty before launching it.
-
-The current updater does not perform an additional local cryptographic signature verification step. GitHub Releases and the HTTPS download path are therefore part of the update trust chain.
-
-## Portable updates
-
-Portable builds do not automatically download and execute the installer. They open the release page instead.
-
-This keeps portable updates manual and makes it easier to preserve the local `data` directory.
-
-## Local configuration
-
-Installed user data:
-
-```text
-%LOCALAPPDATA%\Quill
-```
-
-Portable user data:
-
-```text
-<Quill folder>\data
-```
-
-The primary files are:
-
-- `config.json`
-- `user_prompts.json`
-
-Prompt templates can contain instructions and model names but are not encrypted.
-
-## Start with Windows
-
-The startup option uses the current user's registry hive:
-
-```text
-HKCU\Software\Microsoft\Windows\CurrentVersion\Run
-```
-
-It does not require an administrator-level system service.
-
-## Practical recommendations
-
-- Use a trusted API endpoint for sensitive text.
-- Avoid processing secrets unless the configured endpoint is appropriate for them.
-- Keep the Windows account protected because DPAPI security depends on the user context.
-- Review AI output before pasting it into commands, code, legal text, or other high-impact content.
-- Download published builds from this repository's Releases page.
-- Keep portable `data` folders private if they contain configuration you do not want to share.
-
-## Related documentation
-
-- [Configuration](configuration.md)
-- [Updates and Data](updates-and-data.md)
-- [Architecture](architecture.md)
+Bragi does not sandbox the remote model. A configured endpoint receives the content necessary to perform the requested writing action. Do not select sensitive text for processing unless you trust the endpoint receiving it.

@@ -1,4 +1,4 @@
-"""Settings extensions for direct hotkeys, translation and updates."""
+"""Settings extensions for Bragi direct hotkeys, translation and updates."""
 
 import copy
 import logging
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 class SettingsWindow(BaseSettingsWindow):
-    """Add focused fork features to the standard settings window."""
+    """Add Bragi-specific features to the standard settings window."""
 
     TRANSLATION_LANGUAGES = [
         "Portuguese (Brazil)",
@@ -39,9 +39,20 @@ class SettingsWindow(BaseSettingsWindow):
         "Russian",
     ]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setWindowTitle("Bragi - Settings")
+
     def _create_general_tab(self):
         tab = super()._create_general_tab()
         layout = tab.layout()
+
+        self.checkbox_startup.setText("Start Bragi with Windows")
+        for label in tab.findChildren(QLabel):
+            if "Launch Quill automatically" in label.text():
+                label.setText(
+                    "Launch Bragi automatically when you sign in to Windows."
+                )
 
         translation_group = QGroupBox("Translation")
         translation_layout = QFormLayout()
@@ -67,11 +78,11 @@ class SettingsWindow(BaseSettingsWindow):
         updates_layout = QFormLayout()
         updates_layout.setSpacing(12)
 
-        self.checkbox_check_updates = QCheckBox("Check for updates when Quill starts")
+        self.checkbox_check_updates = QCheckBox("Check for updates when Bragi starts")
         updates_layout.addRow("", self.checkbox_check_updates)
 
         updates_help = QLabel(
-            "Checks GitHub Releases once after startup. No notification is shown when Quill is already up to date."
+            "Checks GitHub Releases once after startup. No notification is shown when Bragi is already up to date."
         )
         updates_help.setObjectName("subtitleLabel")
         updates_help.setWordWrap(True)

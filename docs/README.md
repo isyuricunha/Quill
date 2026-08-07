@@ -1,32 +1,32 @@
-# Quill Documentation
+# Bragi Documentation
 
-This directory contains the complete documentation for the independently maintained `isyuricunha/Quill` codebase.
+This directory contains the maintained documentation for Bragi, a system-wide AI writing assistant for Windows.
 
 ## User guide
 
-| Document | What it covers |
+| Document | Covers |
 | --- | --- |
-| [Getting Started](getting-started.md) | Installer vs portable, first launch, first text transformation |
-| [Configuration](configuration.md) | General, API, hotkey, translation, update, and prompt settings |
-| [Actions and Prompts](actions-and-prompts.md) | Built-in actions, temperatures, ChatML, variables, model overrides |
-| [Hotkeys](hotkeys.md) | Main hotkey, Quick Repeat, direct actions, validation and conflicts |
-| [Updates and Data](updates-and-data.md) | In-app updates, installed vs portable storage, migration behavior |
-| [Security and Privacy](security-and-privacy.md) | API key storage, clipboard behavior, network requests, trust boundaries |
-| [Troubleshooting](troubleshooting.md) | Selection problems, hotkeys, API errors, updates, configuration recovery |
+| [Getting Started](getting-started.md) | Installer vs portable, first launch, first transformation |
+| [Configuration](configuration.md) | API, general settings, translation, updates and prompts |
+| [Actions and Prompts](actions-and-prompts.md) | Built-in actions, ChatML, temperatures and model overrides |
+| [Hotkeys](hotkeys.md) | Main hotkey, Quick Repeat, direct actions and conflicts |
+| [Updates and Data](updates-and-data.md) | Updates, storage locations and Quill-to-Bragi migration |
+| [Security and Privacy](security-and-privacy.md) | API key storage, clipboard behavior and network requests |
+| [Troubleshooting](troubleshooting.md) | Selection, hotkeys, API, updater and migration problems |
 
 ## Developer guide
 
-| Document | What it covers |
+| Document | Covers |
 | --- | --- |
-| [Architecture](architecture.md) | Components, request flow, text capture, prompt rendering, data flow |
-| [Development](development.md) | Local setup, tests, build process, installer packaging, project layout |
-| [Release Process](release-process.md) | Conventional Commit versioning, GitHub Actions, artifacts and smoke tests |
+| [Architecture](architecture.md) | Components, request flow, persistence and update flow |
+| [Development](development.md) | Source setup, tests, build and installer packaging |
+| [Release Process](release-process.md) | Conventional Commits, semantic versioning and artifacts |
 
-## Project status
+## Project lineage
 
-This repository is maintained as an independent fork. It has its own releases, updater target, Windows installer, portable packaging, release workflow, tests, and roadmap.
+Bragi evolved from the Quill codebase and is maintained independently with its own product identity, releases, updater, Windows packaging, tests, documentation and roadmap.
 
-The original copyright notice and GPL license remain in [`../LICENSE`](../LICENSE).
+The original copyright notice and GPL terms remain preserved in [`../LICENSE`](../LICENSE).
 
 ## Quick links
 

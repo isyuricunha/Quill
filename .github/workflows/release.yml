@@ -52,7 +52,6 @@ jobs:
             $baseVersion = $latestTag.TrimStart('v')
             $baseRef = $latestTag
           } else {
-            # The upstream project released v1.0.8 from this commit before the fork.
             $baseVersion = "1.0.8"
             $baseRef = "9afb09c43dc68720dfa177b14973c1e50f2e3909"
           }
@@ -107,7 +106,7 @@ jobs:
         shell: pwsh
         run: |
           Set-Content -Path "resources/version.txt" -Value "${{ steps.version.outputs.version }}" -NoNewline -Encoding utf8
-          Write-Host "Embedded Quill version ${{ steps.version.outputs.version }}"
+          Write-Host "Embedded Bragi version ${{ steps.version.outputs.version }}"
 
       - name: Install Python dependencies
         if: steps.version.outputs.should_release == 'true'
@@ -116,7 +115,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt pyinstaller
 
-      - name: Build Quill
+      - name: Build Bragi
         if: steps.version.outputs.should_release == 'true'
         shell: pwsh
         run: python build.py
@@ -125,11 +124,11 @@ jobs:
         if: steps.version.outputs.should_release == 'true'
         shell: pwsh
         run: |
-          $process = Start-Process -FilePath "dist\Quill\Quill.exe" -ArgumentList "--smoke-test" -Wait -PassThru
+          $process = Start-Process -FilePath "dist\Bragi\Bragi.exe" -ArgumentList "--smoke-test" -Wait -PassThru
           if ($process.ExitCode -ne 0) {
-            throw "Packaged Quill.exe smoke test failed with exit code $($process.ExitCode)."
+            throw "Packaged Bragi.exe smoke test failed with exit code $($process.ExitCode)."
           }
-          Write-Host "Packaged Quill.exe smoke test passed."
+          Write-Host "Packaged Bragi.exe smoke test passed."
 
       - name: Package portable build
         if: steps.version.outputs.should_release == 'true'
@@ -137,8 +136,8 @@ jobs:
         shell: pwsh
         run: |
           $tag = "${{ steps.version.outputs.tag }}"
-          $portable = "Quill-$tag-portable-windows-x64.zip"
-          Compress-Archive -Path "dist\Quill\*" -DestinationPath $portable -Force
+          $portable = "Bragi-$tag-portable-windows-x64.zip"
+          Compress-Archive -Path "dist\Bragi\*" -DestinationPath $portable -Force
           "file=$portable" >> $env:GITHUB_OUTPUT
 
       - name: Install Inno Setup
@@ -173,7 +172,7 @@ jobs:
             throw "Inno Setup failed with exit code $LASTEXITCODE."
           }
 
-          $installer = "Quill-v$version-setup-windows-x64.exe"
+          $installer = "Bragi-v$version-setup-windows-x64.exe"
           $installerPath = Join-Path "installer-output" $installer
           if (-not (Test-Path $installerPath)) {
             throw "Installer was not created at $installerPath"
@@ -190,17 +189,17 @@ jobs:
           $changes = git log "$baseRef..HEAD" --pretty=format:"- %s"
 
           @"
-          ## Quill $tag
+          ## Bragi $tag
 
           ### Changes
           $($changes -join "`n")
 
           ### Downloads
-          - **Installer:** `Quill-$tag-setup-windows-x64.exe`
-          - **Portable:** `Quill-$tag-portable-windows-x64.zip`
+          - **Installer:** `Bragi-$tag-setup-windows-x64.exe`
+          - **Portable:** `Bragi-$tag-portable-windows-x64.zip`
 
           The installer uses a per-user installation and does not require administrator privileges.
-          The portable build can be extracted anywhere and run directly with `Quill.exe`.
+          The portable build can be extracted anywhere and run directly with `Bragi.exe`.
 
           ### Requirements
           - Windows 10/11 64-bit
@@ -215,4 +214,4 @@ jobs:
           $tag = "${{ steps.version.outputs.tag }}"
           $portable = "${{ steps.portable.outputs.file }}"
           $installer = "${{ steps.installer.outputs.file }}"
-          gh release create $tag $portable $installer --title "Quill $tag" --notes-file release-notes.md --target "${{ github.sha }}"
+          gh release create $tag $portable $installer --title "Bragi $tag" --notes-file release-notes.md --target "${{ github.sha }}"

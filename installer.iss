@@ -1,4 +1,4 @@
-#define MyAppName "Quill"
+#define MyAppName "Bragi"
 #define MyAppPublisher "isyuricunha"
 #define MyAppURL "https://github.com/isyuricunha/Quill"
 
@@ -7,6 +7,8 @@
 #endif
 
 [Setup]
+; Keep the historical AppId so Bragi upgrades existing Quill installations
+; instead of creating a second installed product.
 AppId=isyuricunha.Quill
 AppName={#MyAppName}
 AppVersion={#AppVersion}
@@ -15,16 +17,16 @@ AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}/releases
-DefaultDirName={localappdata}\Programs\Quill
-DefaultGroupName=Quill
+DefaultDirName={localappdata}\Programs\Bragi
+DefaultGroupName=Bragi
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir=installer-output
-OutputBaseFilename=Quill-v{#AppVersion}-setup-windows-x64
+OutputBaseFilename=Bragi-v{#AppVersion}-setup-windows-x64
 SetupIconFile=resources\icon.ico
-UninstallDisplayIcon={app}\Quill.exe
+UninstallDisplayIcon={app}\Bragi.exe
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
@@ -32,7 +34,7 @@ CloseApplications=yes
 RestartApplications=no
 VersionInfoVersion={#AppVersion}
 VersionInfoCompany={#MyAppPublisher}
-VersionInfoDescription=Quill AI Writing Assistant
+VersionInfoDescription=Bragi AI Writing Assistant
 VersionInfoProductName={#MyAppName}
 VersionInfoProductVersion={#AppVersion}
 
@@ -40,11 +42,39 @@ VersionInfoProductVersion={#AppVersion}
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "dist\Quill\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "dist\Bragi\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+
+[InstallDelete]
+Type: files; Name: "{app}\Quill.exe"
+Type: files; Name: "{autoprograms}\Quill.lnk"
+Type: files; Name: "{autodesktop}\Quill.lnk"
 
 [Icons]
-Name: "{autoprograms}\Quill"; Filename: "{app}\Quill.exe"; WorkingDir: "{app}"
-Name: "{autodesktop}\Quill"; Filename: "{app}\Quill.exe"; WorkingDir: "{app}"; Tasks: desktopicon
+Name: "{autoprograms}\Bragi"; Filename: "{app}\Bragi.exe"; WorkingDir: "{app}"
+Name: "{autodesktop}\Bragi"; Filename: "{app}\Bragi.exe"; WorkingDir: "{app}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\Quill.exe"; Description: "{cm:LaunchProgram,Quill}"; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\Bragi.exe"; Description: "{cm:LaunchProgram,Bragi}"; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent
+
+[Code]
+const
+  RunKey = 'Software\Microsoft\Windows\CurrentVersion\Run';
+
+procedure MigrateLegacyStartupEntry;
+var
+  LegacyValue: String;
+  BragiCommand: String;
+begin
+  if RegQueryStringValue(HKCU, RunKey, 'Quill', LegacyValue) then
+  begin
+    BragiCommand := '"' + ExpandConstant('{app}\Bragi.exe') + '"';
+    RegWriteStringValue(HKCU, RunKey, 'Bragi', BragiCommand);
+    RegDeleteValue(HKCU, RunKey, 'Quill');
+  end;
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then
+    MigrateLegacyStartupEntry;
+end;

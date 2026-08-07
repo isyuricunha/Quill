@@ -1,60 +1,28 @@
 # Configuration
 
-Quill is configured from the tray icon. Right-click the tray icon and choose **Settings**.
-
-The settings window contains four tabs: General, API, Hotkey, and Prompts.
+Open **Settings** from the Bragi tray menu.
 
 ## General
 
-### Start Quill with Windows
+### Start Bragi with Windows
 
-Enables a per-user Windows startup entry.
+Creates a per-user entry under the Windows `Run` registry key. Administrator privileges are not required.
 
-Quill stores the startup command under:
-
-```text
-HKCU\Software\Microsoft\Windows\CurrentVersion\Run
-```
-
-The value name is `Quill`.
-
-No administrator privileges are required.
+When upgrading from Quill, an existing enabled `Quill` startup entry is migrated to `Bragi`.
 
 ### Translation target language
 
-The **Target language** field controls the built-in Translate action.
+The Translate action uses a configurable target language. Bragi includes common choices such as Portuguese (Brazil), English, Spanish, French, German, Italian, Japanese, Korean, Chinese and Russian, but the field is editable and accepts any target language description.
 
-Quill provides several common choices, including:
+### Update checks
 
-- Portuguese (Brazil)
-- English
-- Spanish
-- French
-- German
-- Italian
-- Japanese
-- Korean
-- Chinese (Simplified)
-- Chinese (Traditional)
-- Russian
-
-The field is editable, so any target language description can be entered manually.
-
-When the setting is saved, Quill updates the Translate prompt's `Target language:` directive.
-
-### Check for updates when Quill starts
-
-When enabled, Quill checks this repository's latest GitHub Release once shortly after startup.
-
-If Quill is already current, the startup check does not display a notification.
-
-Manual update checks are always available from the tray menu.
+`Check for updates when Bragi starts` performs one lightweight GitHub Releases check after launch. If no update exists, the automatic check is silent.
 
 ## API
 
 ### Base URL
 
-The base URL for an OpenAI-compatible API.
+Enter the root of an OpenAI-compatible API. Bragi appends the chat-completions route internally.
 
 Examples:
 
@@ -64,31 +32,17 @@ http://localhost:11434/v1
 http://localhost:8080/v1
 ```
 
-Quill sends requests to the compatible `/chat/completions` interface relative to this configured endpoint.
+### API key
 
-### API Key
+The API key is stored encrypted with Windows DPAPI. Leaving the API-key field empty while editing settings keeps the currently stored key.
 
-The key used by the configured endpoint.
+### Global model
 
-The value is encrypted before it is written to `config.json` using Windows DPAPI.
-
-If the API Key field in Settings is left empty, Quill keeps the existing stored key.
-
-Some local endpoints do not require a key.
-
-### Model
-
-The global default model name.
-
-Quill does not use a fixed provider model list. Enter the identifier expected by your endpoint.
-
-Each prompt can optionally override the global model from the Prompts tab.
+The model field is the default model used by all prompts that do not have a Model Override.
 
 ### Additional Params
 
-Additional request parameters can be supplied as a JSON object.
-
-Example:
+Extra request parameters can be supplied as a JSON object:
 
 ```json
 {
@@ -97,148 +51,50 @@ Example:
 }
 ```
 
-The value must be a JSON object.
-
-Common use cases include provider-specific options, reasoning settings, sampling parameters, and compatible extensions.
-
-Do not use Additional Params as the primary place to select a model. Quill applies the global or per-prompt model after Additional Params are merged into the request payload.
+Do not use Additional Params as the primary way to choose a model. Bragi applies its global or per-prompt model after these parameters are merged.
 
 ## Hotkey
 
-### Main Hotkey
+The Hotkey tab contains:
 
-Default:
+- Main Hotkey
+- Quick Repeat
+- Direct Action Hotkeys
 
-```text
-<ctrl>+<space>
-```
+Shortcuts must include Ctrl, Shift or Alt. Bragi rejects duplicate shortcuts and critical Windows combinations.
 
-Opens the Quill popup after extracting the currently selected text.
-
-### Quick Repeat
-
-Default:
-
-```text
-<ctrl>+<shift>+<space>
-```
-
-Repeats the most recently used action on the current selection without opening the popup.
-
-Leave the field empty to disable Quick Repeat.
-
-### Direct Action Hotkeys
-
-Direct actions bypass the popup.
-
-Current defaults:
-
-| Action | Default |
-| --- | --- |
-| Grammar Check | `<ctrl>+<alt>+g` |
-| Rewrite | `<ctrl>+<alt>+r` |
-| Professional | Disabled |
-| Translate | `<ctrl>+<alt>+t` |
-
-Leave any direct action field empty to disable it.
-
-See [Hotkeys](hotkeys.md) for syntax, validation, and conflicts.
+See [Hotkeys](hotkeys.md).
 
 ## Prompts
 
-The Prompts tab exposes the effective prompt definitions used by Quill.
+Every built-in prompt exposes:
 
-For each prompt you can configure:
+- display name
+- temperature
+- optional model override
+- ChatML template
+- reset to default
 
-- **Name**
-- **Temperature** from `0.0` to `2.0`
-- **Model override (optional)**
-- **Template**
+Leaving the model override empty uses the global API model.
 
-### Model override
+User prompt changes are written to `user_prompts.json`; built-in defaults remain in `resources/default_prompts.json`.
 
-Leave the field empty to use the global model configured in the API tab.
-
-If a model is entered, only that prompt uses the override.
-
-Example:
-
-```text
-Global model: fast-general-model
-Grammar Check: empty, uses global model
-Rewrite: stronger-writing-model
-Translate: translation-model
-```
-
-The Base URL and API key remain global. The override changes only the model for that request.
-
-### Reset to Default
-
-**Reset to Default** removes the user override for the selected built-in prompt and restores the bundled version.
-
-### Apply Changes
-
-**Apply Changes** validates and writes the selected prompt to `user_prompts.json`.
-
-Saving the Settings dialog also saves the currently selected prompt.
+See [Actions and Prompts](actions-and-prompts.md).
 
 ## Configuration files
 
-### Installed build
+Installed builds:
 
 ```text
-%LOCALAPPDATA%\Quill\config.json
-%LOCALAPPDATA%\Quill\user_prompts.json
+%LOCALAPPDATA%\Bragi\config.json
+%LOCALAPPDATA%\Bragi\user_prompts.json
 ```
 
-### Portable build
+Portable builds:
 
 ```text
-<Quill folder>\data\config.json
-<Quill folder>\data\user_prompts.json
+<Bragi folder>\data\config.json
+<Bragi folder>\data\user_prompts.json
 ```
 
-`user_prompts.json` only exists when user prompt overrides need to be stored.
-
-## Important configuration keys
-
-A typical configuration contains values conceptually equivalent to:
-
-```json
-{
-  "api": {
-    "base_url": "https://api.example.com/v1",
-    "api_key_encrypted": "...",
-    "model": "model-name",
-    "additional_params": {}
-  },
-  "hotkey": {
-    "key": "<ctrl>+<space>",
-    "quick_key": "<ctrl>+<shift>+<space>",
-    "actions": {
-      "grammar_check": "<ctrl>+<alt>+g",
-      "rewrite": "<ctrl>+<alt>+r",
-      "professional": "",
-      "translate": "<ctrl>+<alt>+t"
-    }
-  },
-  "translation": {
-    "target_language": "English"
-  },
-  "startup": {
-    "enabled": false
-  },
-  "updates": {
-    "check_on_startup": true
-  }
-}
-```
-
-The encrypted API key is machine and Windows-user-context dependent because it uses DPAPI.
-
-## Related documentation
-
-- [Actions and Prompts](actions-and-prompts.md)
-- [Hotkeys](hotkeys.md)
-- [Updates and Data](updates-and-data.md)
-- [Security and Privacy](security-and-privacy.md)
+See [Updates and Data](updates-and-data.md) for migration details.

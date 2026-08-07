@@ -1,14 +1,6 @@
 # Actions and Prompts
 
-Quill's built-in actions are prompt templates rendered into OpenAI-compatible chat messages.
-
-The bundled defaults live in:
-
-```text
-resources/default_prompts.json
-```
-
-User modifications are stored separately in `user_prompts.json`.
+Bragi ships with focused writing actions. The built-in prompts are intentionally compact and use separate system and user messages so permanent behavior is kept distinct from selected text.
 
 ## Built-in actions
 
@@ -16,100 +8,45 @@ User modifications are stored separately in `user_prompts.json`.
 
 Default temperature: `0.3`
 
-Purpose:
-
-- correct grammar
-- correct spelling
-- correct punctuation
-- correct clear typographical mistakes
-- preserve the original meaning and style
-
-The prompt is deliberately conservative. It tells the model to preserve intentional slang, dialect, abbreviations, capitalization, emojis, Markdown, URLs, commands, code, file paths, placeholders, and identifiers unless a correction is clearly required.
-
-It is intended for cases where the text should remain recognizably yours.
+Corrects clear grammar, spelling, punctuation and typographical errors while preserving the original language, tone, formatting and intentional informality whenever possible.
 
 ### Rewrite
 
 Default temperature: `0.5`
 
-Purpose:
-
-- improve clarity
-- improve readability
-- improve naturalness
-- improve flow
-- preserve the original voice and degree of formality
-
-Rewrite is not intended to automatically make casual writing formal. It explicitly prefers natural, idiomatic language and avoids unnecessary corporate or ornate wording.
+Improves clarity, readability and flow while preserving the writer's voice and level of formality. It is not intended to automatically turn casual text into corporate prose.
 
 ### Professional
 
 Default temperature: `0.4`
 
-Purpose:
-
-- correct grammar and punctuation
-- clean up awkward sentence structure
-- replace overly casual wording when appropriate
-- remove filler and unnecessary repetition
-- reorganize sentences and paragraphs for coherence
-- produce polished professional writing
-
-Professional is intentionally stronger than Rewrite.
-
-It may substantially restructure the text, but it is instructed to preserve facts, names, numbers, dates, requirements, intent, nuance, and degree of certainty. It should not invent information or make the author's position stronger than the source text.
+Actively restructures and polishes the text for professional contexts. It may remove unsuitable slang, improve organization and formalize phrasing, but it must preserve facts, intent, numbers, nuance and degree of certainty.
 
 ### Summarize
 
 Default temperature: `0.3`
 
-Purpose:
-
-- produce a concise summary
-- preserve important facts and conditions
-- preserve uncertainty and qualifications
-- remove repetition and nonessential details
-
-The default output is continuous prose rather than bullet points.
-
-The prompt explicitly forbids inventing, inferring, or speculating beyond the source material.
+Produces concise continuous prose and preserves important names, numbers, dates, conditions, decisions and caveats without inventing missing information.
 
 ### Translate
 
 Default temperature: `0.3`
 
-Purpose:
-
-- translate into the target language configured under **Settings > General**
-- preserve meaning, tone, intent, register, and formality
-- produce natural target-language phrasing instead of mechanically literal output
-
-The prompt tells the model to preserve or avoid translating technical elements such as URLs, handles, code, file paths, commands, placeholders, and identifiers.
-
-The default target is `English`, but the user setting updates the prompt dynamically.
+Translates naturally into the target language configured in Settings. It preserves formatting, code, URLs, handles, placeholders and other content that should not be casually altered.
 
 ### Custom
 
 Default temperature: `0.7`
 
-Purpose:
+Uses the instruction typed in the popup. The selected text is treated as data rather than as instructions that can override the prompt hierarchy.
 
-- apply a user-written instruction to the selected text
+## ChatML templates
 
-The prompt treats `<instruction>` as the task and `<text>` as data to process.
-
-This separation is intentional. Text that contains command-like phrases is not supposed to become a new instruction to the model.
-
-## Prompt structure
-
-Quill supports ChatML-style templates.
-
-Example:
+Templates use ChatML-style message markers, for example:
 
 ```text
 <|im_start|>system
 You are a careful editor.
-Return only the processed text.
 <|im_end|>
 <|im_start|>user
 <text>
@@ -118,130 +55,28 @@ Return only the processed text.
 <|im_end|>
 ```
 
-The parser converts those blocks into standard message objects such as:
-
-```json
-[
-  {
-    "role": "system",
-    "content": "You are a careful editor.\nReturn only the processed text."
-  },
-  {
-    "role": "user",
-    "content": "<text>\nSelected text here\n</text>"
-  }
-]
-```
+Bragi parses message structure before substituting selected text. This prevents text containing strings that resemble ChatML control markers from becoming new prompt messages.
 
 ## Variables
 
-Quill currently supports these template variables:
+`{{text}}` is replaced with the selected text.
 
-### `{{text}}`
+`{{instruction}}` is replaced with the custom instruction supplied in the popup.
 
-The selected text captured from the active application.
+Substitution is literal, not recursively interpreted.
 
-### `{{instruction}}`
+## Model Override
 
-The instruction entered in the Custom Instruction field.
+Each prompt can optionally specify its own model.
 
-Variables are substituted after ChatML message parsing. This means selected text containing strings that look like ChatML control tokens remains ordinary message content instead of creating new roles.
+If the override is empty, the global model from the API tab is used. This makes it possible to use a fast model for Grammar Check and a stronger model for Rewrite or Professional without changing the default workflow for users who do not need it.
 
-Substitution is also single-pass. If selected text itself contains `{{instruction}}`, Quill keeps that sequence literal rather than recursively replacing it.
+## User overrides
 
-## Editing prompts
+Editing a prompt creates or updates an entry in `user_prompts.json`. Reset to Default removes that override and restores the built-in prompt.
 
-Open **Settings > Prompts**.
+Built-in prompts live in `resources/default_prompts.json` and should normally be changed through source control rather than by editing a packaged installation.
 
-For a selected prompt you can edit:
+## Prompt migrations
 
-- name
-- temperature
-- optional model override
-- template
-
-Built-in prompts can be restored with **Reset to Default**.
-
-The Custom prompt name is intentionally fixed in the current UI.
-
-## Per-prompt model override
-
-Each prompt can optionally use a model different from the global API model.
-
-Example:
-
-```text
-Global model: small-fast-model
-Grammar Check: empty
-Rewrite: writing-model
-Professional: writing-model
-Translate: multilingual-model
-```
-
-An empty override uses the global model.
-
-The override affects only the `model` field of that request. Base URL, API key, and global Additional Params remain shared.
-
-## Temperature guidance
-
-Quill accepts temperatures from `0.0` through `2.0`.
-
-Lower values are generally better for deterministic editing tasks such as Grammar Check and Translate. Higher values allow more variation, which can be useful for Custom instructions or more creative rewriting.
-
-The bundled defaults are intentionally moderate:
-
-| Action | Temperature |
-| --- | ---: |
-| Grammar Check | `0.3` |
-| Rewrite | `0.5` |
-| Professional | `0.4` |
-| Summarize | `0.3` |
-| Translate | `0.3` |
-| Custom | `0.7` |
-
-Different models interpret temperature differently, so treat these values as practical defaults rather than universal rules.
-
-## Formatting preservation
-
-The default editing prompts explicitly ask models to preserve technical and structural content where appropriate, including:
-
-- paragraph breaks
-- Markdown
-- URLs
-- email addresses
-- `@handles`
-- code
-- file paths
-- commands
-- placeholders
-- identifiers
-
-A model can still make mistakes. For code-heavy or syntax-sensitive selections, review the result before relying on it.
-
-## Prompt storage
-
-Bundled defaults:
-
-```text
-resources/default_prompts.json
-```
-
-Installed user overrides:
-
-```text
-%LOCALAPPDATA%\Quill\user_prompts.json
-```
-
-Portable user overrides:
-
-```text
-<Quill folder>\data\user_prompts.json
-```
-
-User overrides are kept separate from bundled defaults so updates can replace application files without erasing customized prompts.
-
-## Related documentation
-
-- [Configuration](configuration.md)
-- [Hotkeys](hotkeys.md)
-- [Security and Privacy](security-and-privacy.md)
+Bragi carries forward compatible user prompt overrides from previous versions. Known old default prompts can be migrated to newer defaults while preserving user choices such as target language or Model Override when possible. A prompt that was genuinely customized by the user is not silently replaced with a new default.

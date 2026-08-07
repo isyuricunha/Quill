@@ -1,352 +1,103 @@
 # Architecture
 
-Quill is a small PySide6 Windows tray application organized into three main code areas:
+Bragi is a small PySide6 tray application. Its main workflow is intentionally simple: capture selected text, render a prompt, call an OpenAI-compatible endpoint, and paste the result back into the active application.
 
-```text
-app/    runtime application workflow
-core/   reusable configuration, API, prompt, path, update, and security logic
-ui/     Qt windows, dialogs, popup, and styling
-```
+## Main components
 
-The executable entry point is `main.py`.
+### `main.py`
 
-## High-level flow
+Application entry point. It performs the packaged smoke-test path, configures logging, acquires the single-instance lock and starts `BragiApp`.
 
-A typical Grammar Check, Rewrite, Professional, Summarize, or Translate request follows this path:
+### `app/application.py`
+
+`BragiApp` coordinates managers and UI components. It owns application state such as the last action used by Quick Repeat and serializes AI requests so overlapping transformations are not started accidentally.
+
+### `app/hotkey_manager.py`
+
+Registers the main, Quick Repeat and direct-action global shortcuts through `pynput`.
+
+### `app/text_processor.py`
+
+Captures and replaces selected text using simulated copy/paste and temporary clipboard access. Modifier keys are released before synthetic clipboard shortcuts to reduce shortcut interference.
+
+### `app/tray_manager.py`
+
+Creates the tray icon and menu, manages Pause/Resume, Settings and update actions, and runs update network work outside the UI thread.
+
+## Core services
+
+### `core/config_manager.py`
+
+Reads and writes `config.json`, including API settings, hotkeys and general preferences.
+
+### `core/crypto_manager.py`
+
+Encrypts and decrypts the API key through Windows DPAPI.
+
+### `core/prompt_manager.py`
+
+Loads built-in prompts, merges user overrides, applies prompt migrations and produces message arrays through the ChatML parser.
+
+### `core/chatml_parser.py`
+
+Parses ChatML structure before placeholder substitution. This keeps selected text inside the intended message rather than allowing it to create new message boundaries.
+
+### `core/app_paths.py`
+
+Centralizes installed/portable detection, resource paths, Bragi user-data paths and legacy Quill data migration.
+
+### `core/startup_manager.py`
+
+Manages the per-user Windows `Run` entry and migrates a legacy Quill startup entry to Bragi.
+
+### `core/update_manager.py`
+
+Reads the embedded version, queries GitHub Releases, locates the Windows installer asset, validates download origins, downloads updates and launches the setup executable.
+
+### `core/single_instance.py`
+
+Uses an OS-level file lock inside the active Bragi user-data directory to prevent duplicate running instances.
+
+### `core/brand.py`
+
+Contains product and compatibility constants. Keeping legacy identities centralized makes the Quill-to-Bragi transition explicit instead of scattering old names throughout the application.
+
+## UI
+
+- `ui/onboarding_window.py`: first-run API setup
+- `ui/settings_window.py`: base settings implementation
+- `ui/direct_hotkey_settings.py`: maintained Bragi settings layer for translation, updater, direct hotkeys and model overrides
+- `ui/popup_window.py`: action popup shown near the cursor
+- `ui/styles.py`: shared dark theme
+
+## Request flow
 
 ```text
 Global hotkey
-    |
-    v
-HotkeyManager
-    |
-    v
-QuillApp
-    |
-    v
-TextProcessor
-    |
-    | simulate Ctrl+C
-    v
-Selected text
-    |
-    v
-Popup action or direct action
-    |
-    v
-PromptManager
-    |
-    v
-ChatMLParser
-    |
-    v
-OAICompatibleProvider
-    |
-    | POST /chat/completions
-    v
-Configured API
-    |
-    v
-Model response
-    |
-    v
-TextProcessor
-    |
-    | simulate Ctrl+V
-    v
-Original selection replaced
+    -> TextProcessor copies selected text
+    -> BragiApp chooses popup / direct action / Quick Repeat
+    -> PromptManager renders messages
+    -> OAICompatibleProvider sends request
+    -> BragiApp receives response
+    -> TextProcessor pastes response
 ```
 
-## `main.py`
+The AI request runs in a background thread so the Qt UI remains responsive.
 
-Responsibilities include:
+## Persistence flow
 
-- process startup
-- single-instance handling
-- logging initialization
-- packaged smoke-test entry behavior
-- creating `QuillApp`
+Installed builds use `%LOCALAPPDATA%\Bragi`. Portable builds use `data` beside `Bragi.exe`.
 
-The published executable is built from this entry point.
+When installed Bragi starts without a destination file, `app_paths` can copy the corresponding file from `%LOCALAPPDATA%\Quill`. Existing Bragi files are never replaced by migration.
 
-## `app/application.py`
+## Build architecture
 
-`QuillApp` is the main orchestrator.
-
-It owns the runtime managers and coordinates:
-
-- onboarding
-- settings
-- API provider configuration
-- global hotkeys
-- selected-text extraction
-- popup actions
-- direct action hotkeys
-- Quick Repeat
-- AI request serialization
-- text replacement
-- cleanup on exit
-
-### Request serialization
-
-Quill guards AI requests with a lock and tracks whether a request is already in progress.
-
-This prevents multiple overlapping model responses from racing to replace the same selection.
-
-Text extraction also has its own in-progress state so multiple hotkeys do not start competing capture operations.
-
-## `app/hotkey_manager.py`
-
-Uses `pynput.keyboard.GlobalHotKeys`.
-
-It manages three categories:
-
-- Main Hotkey
-- Quick Repeat
-- direct action hotkeys
-
-Direct hotkeys emit the prompt key together with the current mouse position.
-
-Secondary hotkeys record a short suppression timestamp so overlapping combinations do not accidentally trigger the main hotkey as well.
-
-## `app/text_processor.py`
-
-Text capture and replacement use standard Windows-style copy and paste simulation.
-
-### Capture
-
-The worker:
-
-1. releases common modifier keys
-2. backs up the clipboard
-3. writes a marker to the clipboard
-4. simulates `Ctrl+C`
-5. waits briefly for the target application
-6. reads the selection
-7. restores the previous clipboard text
-
-The marker lets Quill distinguish a real selection copy from an unchanged clipboard.
-
-### Replacement
-
-The worker:
-
-1. backs up the clipboard
-2. copies the model response
-3. simulates `Ctrl+V`
-4. restores the previous clipboard text
-
-Each operation uses a fresh Qt worker thread.
-
-## `app/tray_manager.py`
-
-Owns the Windows system tray icon and menu.
-
-Current tray actions:
-
-- Settings
-- Check for Updates
-- Pause or Resume
-- Quit
-
-It also manages background update checks and installed-update downloads.
-
-## `core/config_manager.py`
-
-Loads and saves JSON configuration.
-
-Important responsibilities:
-
-- dot-notation access such as `api.model`
-- default configuration creation
-- API key encryption and decryption through `CryptoManager`
-- installed vs portable configuration path selection through `app_paths`
-
-## `core/app_paths.py`
-
-Centralizes runtime paths and build-mode detection.
-
-It distinguishes:
-
-### Installed
-
-Application:
+`build.py` creates a PyInstaller `onedir` package at:
 
 ```text
-%LOCALAPPDATA%\Programs\Quill
+dist\Bragi\Bragi.exe
 ```
 
-User data:
+The release workflow then smoke-tests that executable, creates the portable ZIP, compiles the Inno Setup installer and publishes both artifacts.
 
-```text
-%LOCALAPPDATA%\Quill
-```
-
-### Portable
-
-User data:
-
-```text
-<Quill folder>\data
-```
-
-It also performs conservative migration of known legacy user-data files.
-
-## `core/crypto_manager.py`
-
-Wraps Windows DPAPI through `ctypes`.
-
-It uses:
-
-- `CryptProtectData`
-- `CryptUnprotectData`
-
-The encrypted bytes are Base64 encoded for JSON storage.
-
-## `core/prompt_manager.py`
-
-Combines:
-
-- bundled prompt definitions
-- user prompt overrides
-- prompt metadata
-- optional per-prompt model override
-- temperature values
-- ChatML rendering
-
-Bundled prompts come from:
-
-```text
-resources/default_prompts.json
-```
-
-User changes come from:
-
-```text
-user_prompts.json
-```
-
-The effective prompt set is built by applying user overrides over bundled defaults.
-
-## `core/chatml_parser.py`
-
-Parses ChatML-style blocks into OpenAI-compatible message objects.
-
-Important design detail: ChatML roles are parsed before selected text is substituted.
-
-That means user-selected text containing ChatML-looking tokens remains content rather than modifying the request's message structure.
-
-Variable substitution is single-pass.
-
-## `core/ai_provider.py`
-
-Implements the OpenAI-compatible request client.
-
-A request contains:
-
-- rendered messages
-- temperature
-- optional max tokens
-- Additional Params
-- selected model
-
-The selected model is either:
-
-1. the prompt's optional model override, if configured
-2. the global API model otherwise
-
-The provider applies the selected model after Additional Params are merged so an accidental `model` key in Additional Params does not override Quill's explicit model selection.
-
-## `core/update_manager.py`
-
-Implements semantic-version update checks against the latest public GitHub Release for `isyuricunha/Quill`.
-
-Responsibilities:
-
-- read the embedded build version
-- query the latest release
-- compare semantic versions
-- find the setup asset
-- distinguish installed and portable behavior
-- download the installed setup to a temporary directory
-- launch the installer
-
-## `core/startup_manager.py`
-
-Registers Quill under:
-
-```text
-HKCU\Software\Microsoft\Windows\CurrentVersion\Run
-```
-
-The startup command uses the packaged executable when frozen and `main.py` when running from source.
-
-## `ui/popup_window.py`
-
-The popup presents quick actions and the Custom Instruction editor.
-
-Built-in buttons currently include:
-
-- Grammar Check
-- Rewrite
-- Professional
-- Summarize
-- Translate
-
-The Custom Instruction field sends on `Enter` and inserts a line break on `Shift+Enter`.
-
-## Settings UI
-
-`ui/settings_window.py` contains the base settings dialog.
-
-`ui/direct_hotkey_settings.py` extends it with independently maintained features such as:
-
-- translation target language
-- startup update preference
-- direct action hotkeys
-- per-prompt model override
-
-The extension class is the Settings window imported by `QuillApp`.
-
-## Resources
-
-Important bundled files:
-
-```text
-resources/default_prompts.json
-resources/version.txt
-resources/icon.ico
-resources/icon_alpha.ico
-```
-
-The release workflow rewrites `resources/version.txt` before packaging a release.
-
-## Packaging
-
-`build.py` produces a PyInstaller `onedir` build under:
-
-```text
-dist/Quill
-```
-
-The build explicitly collects Quill's internal packages and critical PySide6 modules instead of relying only on PyInstaller import discovery.
-
-The published installer is created from `installer.iss` using Inno Setup.
-
-## Release architecture
-
-`.github/workflows/release.yml` handles:
-
-1. source compilation checks
-2. unit tests
-3. semantic version calculation
-4. version embedding
-5. dependency installation
-6. PyInstaller build
-7. packaged executable smoke test
-8. portable ZIP packaging
-9. Inno Setup compilation
-10. release notes
-11. GitHub Release publication
-
-See [Release Process](release-process.md).
+The installer intentionally keeps the historical internal application ID from Quill so Windows recognizes Bragi as the same installed product during the rebrand upgrade.

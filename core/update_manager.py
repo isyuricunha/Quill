@@ -1,4 +1,4 @@
-"""GitHub Releases based update support for Quill."""
+"""GitHub Releases based update support for Bragi."""
 
 import json
 import logging
@@ -10,18 +10,26 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 from core.app_paths import get_resource_dir, is_installed_build
+from core.brand import APP_NAME, CURRENT_REPOSITORY, RENAMED_REPOSITORY
 
 
 logger = logging.getLogger(__name__)
 
 
 class UpdateManager:
-    """Check, download and launch Quill updates from GitHub Releases."""
+    """Check, download and launch Bragi updates from GitHub Releases."""
 
-    API_URL = "https://api.github.com/repos/isyuricunha/Quill/releases/latest"
-    RELEASES_URL = "https://github.com/isyuricunha/Quill/releases"
-    USER_AGENT = "Quill-Updater"
+    # Keep the historical repository endpoint as the canonical request URL during
+    # the rename transition. GitHub redirects this URL after a repository rename,
+    # so both old and new Bragi installations keep updating correctly.
+    API_URL = f"https://api.github.com/repos/{CURRENT_REPOSITORY}/releases/latest"
+    RELEASES_URL = f"https://github.com/{CURRENT_REPOSITORY}/releases"
+    USER_AGENT = "Bragi-Updater"
     INSTALLER_SUFFIX = "-setup-windows-x64.exe"
+    ALLOWED_DOWNLOAD_PREFIXES = (
+        f"https://github.com/{CURRENT_REPOSITORY}/releases/download/",
+        f"https://github.com/{RENAMED_REPOSITORY}/releases/download/",
+    )
 
     def __init__(self):
         self.current_version = self._read_current_version()
@@ -90,7 +98,7 @@ class UpdateManager:
 
     @staticmethod
     def is_installed_build() -> bool:
-        """Return whether Quill is running from the installed build."""
+        """Return whether Bragi is running from the installed build."""
         return is_installed_build()
 
     def download_installer(self, update_info: Dict[str, Any]) -> Path:
@@ -101,13 +109,11 @@ class UpdateManager:
         if not url or not name:
             raise RuntimeError("This release does not contain a Windows installer.")
 
-        if not str(url).startswith(
-            "https://github.com/isyuricunha/Quill/releases/download/"
-        ):
+        if not any(str(url).startswith(prefix) for prefix in self.ALLOWED_DOWNLOAD_PREFIXES):
             raise RuntimeError("Refusing to download an installer from an unexpected URL.")
 
         safe_name = Path(str(name)).name
-        updates_dir = Path(tempfile.gettempdir()) / "Quill" / "updates"
+        updates_dir = Path(tempfile.gettempdir()) / APP_NAME / "updates"
         updates_dir.mkdir(parents=True, exist_ok=True)
         destination = updates_dir / safe_name
 

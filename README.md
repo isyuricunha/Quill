@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🪶 Quill
+# Bragi
 
 **System-wide AI writing assistance for Windows, powered by your own OpenAI-compatible API.**
 
@@ -9,19 +9,23 @@
 [![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?logo=windows&logoColor=white)](#requirements)
 [![License](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
-Select text anywhere, press a hotkey, choose an action, and Quill replaces the selection with the AI result.
+Select text anywhere, press a hotkey, choose an action, and Bragi replaces the selection with the AI result.
 
 [Download](../../releases/latest) · [Documentation](docs/README.md) · [Configuration](docs/configuration.md) · [Troubleshooting](docs/troubleshooting.md)
 
 </div>
 
-## Why Quill?
+## What is Bragi?
 
-Quill is a small Windows tray utility focused on one job: making selected text better without forcing you into a full AI chat application.
+Bragi is a small Windows tray utility focused on one job: improving selected text without turning into another full AI chat client.
 
-It works across applications through standard copy and paste behavior, connects to the OpenAI-compatible endpoint you choose, and stays out of the way until you call it.
+It works across applications through standard copy and paste behavior, connects to the OpenAI-compatible endpoint you choose, and stays out of the way until you invoke it.
 
-### Highlights
+The name comes from **Bragi**, the Norse god associated with poetry and eloquence.
+
+Bragi evolved from the Quill codebase and is now maintained as an independent project with its own releases, Windows packaging, updater, tests, documentation, and roadmap.
+
+## Highlights
 
 - **System-wide text actions** for selected text in Windows applications
 - **Grammar Check** for conservative grammar, spelling, and punctuation fixes
@@ -37,8 +41,8 @@ It works across applications through standard copy and paste behavior, connects 
 - **OpenAI-compatible APIs** including hosted, local, and proxy endpoints
 - **Windows DPAPI encryption** for the stored API key
 - **Start with Windows** using a per-user startup entry
-- **Built-in updater** backed by this repository's GitHub Releases
-- **Installer and portable builds** with separate, well-defined data locations
+- **Built-in updater** backed by GitHub Releases
+- **Installer and portable builds** with separate user-data locations
 - **Automatic releases** with unit tests and a packaged executable smoke test
 
 ## Download
@@ -47,22 +51,22 @@ Go to the [latest release](../../releases/latest) and choose one of the Windows 
 
 | Build | File | Best for |
 | --- | --- | --- |
-| Installer | `Quill-vX.Y.Z-setup-windows-x64.exe` | Normal desktop use, Start Menu integration, in-app installer updates |
-| Portable | `Quill-vX.Y.Z-portable-windows-x64.zip` | Keeping Quill self-contained or moving it between folders |
+| Installer | `Bragi-vX.Y.Z-setup-windows-x64.exe` | Normal desktop use, Start Menu integration, in-app installer updates |
+| Portable | `Bragi-vX.Y.Z-portable-windows-x64.zip` | Keeping Bragi self-contained or moving it between folders |
 
-The installer is per-user, installs under `%LOCALAPPDATA%\Programs\Quill`, and does not require administrator privileges.
+The installer is per-user and does not require administrator privileges. New installations use `%LOCALAPPDATA%\Programs\Bragi`.
 
 ## Quick start
 
-1. Install Quill or extract the portable ZIP.
-2. Run `Quill.exe`.
+1. Install Bragi or extract the portable ZIP.
+2. Run `Bragi.exe`.
 3. Enter your **Base URL**, **API Key** if required, and **Model**.
 4. Select text in another application.
 5. Press `Ctrl+Space`.
 6. Choose an action.
-7. Quill replaces the selected text with the result.
+7. Bragi replaces the selected text with the result.
 
-For custom instructions, type the instruction in the popup and press `Enter`. Use `Shift+Enter` for a new line.
+For a custom transformation, type an instruction in the popup and press `Enter`. Use `Shift+Enter` for a new line.
 
 See [Getting Started](docs/getting-started.md) for the full walkthrough.
 
@@ -85,7 +89,7 @@ More detail: [Actions and Prompts](docs/actions-and-prompts.md).
 
 | Purpose | Default |
 | --- | --- |
-| Open Quill popup | `Ctrl+Space` |
+| Open Bragi popup | `Ctrl+Space` |
 | Quick Repeat | `Ctrl+Shift+Space` |
 | Grammar Check directly | `Ctrl+Alt+G` |
 | Rewrite directly | `Ctrl+Alt+R` |
@@ -98,7 +102,7 @@ More detail: [Hotkeys](docs/hotkeys.md).
 
 ## Settings
 
-Quill organizes configuration into four tabs:
+Bragi organizes configuration into four tabs:
 
 - **General**: Start with Windows, translation target language, update checks
 - **API**: Base URL, API key, global model, additional JSON parameters
@@ -111,9 +115,9 @@ More detail: [Configuration](docs/configuration.md).
 
 ## OpenAI-compatible API support
 
-Quill sends requests to the `/chat/completions` interface exposed by the Base URL you configure. This makes it suitable for many hosted and local OpenAI-compatible services, such as OpenAI, compatible gateways, Ollama, llama.cpp, and other servers that implement the same request shape.
+Bragi sends requests to the `/chat/completions` interface exposed by the Base URL you configure. It can therefore work with many hosted and local services that implement the OpenAI-compatible request shape.
 
-Example configuration:
+Example:
 
 ```text
 Base URL: http://localhost:11434/v1
@@ -121,7 +125,7 @@ API Key:  optional for local servers
 Model:    your-model-name
 ```
 
-You can also provide additional request parameters as JSON:
+Additional request parameters can be supplied as JSON:
 
 ```json
 {
@@ -130,42 +134,43 @@ You can also provide additional request parameters as JSON:
 }
 ```
 
-Use the dedicated global model field or per-prompt model override for `model`. Quill applies the selected model after Additional Params are merged.
+Use the dedicated global model field or a per-prompt model override for `model`.
 
 ## Installed vs portable data
 
-Quill intentionally separates user data based on the build type:
+Bragi separates user data based on build type:
 
 | Build | User data location |
 | --- | --- |
-| Installed | `%LOCALAPPDATA%\Quill` |
-| Portable | `data` beside `Quill.exe` |
+| Installed | `%LOCALAPPDATA%\Bragi` |
+| Portable | `data` beside `Bragi.exe` |
 
-The main user files are:
+The primary user files are `config.json` and `user_prompts.json`.
 
-- `config.json`
-- `user_prompts.json`
+### Upgrading from Quill
 
-When upgrading from an older layout, Quill copies known legacy user files into the new location without deleting the originals and without overwriting an existing destination file.
+Bragi v2 is designed as an upgrade path from Quill. On first use, an installed Bragi build looks for the previous `%LOCALAPPDATA%\Quill` configuration and prompt overrides. Missing Bragi files are copied automatically.
+
+Existing Bragi files always win. The old Quill files are left untouched for recovery, and the migration never overwrites an existing destination file.
+
+The Windows installer also migrates an enabled `Quill` startup entry to `Bragi` and removes obsolete Quill shortcuts and the old executable when upgrading an installed copy.
 
 More detail: [Updates and Data](docs/updates-and-data.md).
 
 ## Updates
 
-The tray menu contains **Check for Updates**.
+The tray menu contains **Check for Updates**. By default, Bragi also checks GitHub Releases once shortly after startup and stays silent when no update exists.
 
-By default, Quill also checks GitHub Releases once shortly after startup. If the current version is already up to date, the automatic check stays quiet.
-
-- **Installed build**: Quill can download the new setup executable, start it, and close the running instance.
-- **Portable build**: Quill opens the release page so you can replace the portable files manually.
+- **Installed build**: Bragi can download the new setup executable, start it, and close the running application.
+- **Portable build**: Bragi opens the release page so the portable files can be replaced manually.
 
 More detail: [Updates and Data](docs/updates-and-data.md).
 
 ## Security and privacy
 
 - The API key is encrypted with Windows DPAPI and tied to the Windows user context.
-- Selected text is sent only when you invoke an AI action, to the endpoint configured in Quill.
-- Quill temporarily uses the clipboard to copy the selection and paste the result, then restores the previous clipboard text.
+- Selected text is sent only when you invoke an AI action, to the endpoint configured in Bragi.
+- Bragi temporarily uses the clipboard to copy the selection and paste the result, then restores the previous clipboard text.
 - Update checks contact GitHub Releases when performed manually or when startup checks are enabled.
 
 More detail: [Security and Privacy](docs/security-and-privacy.md).
@@ -175,7 +180,7 @@ More detail: [Security and Privacy](docs/security-and-privacy.md).
 - Windows 10 or Windows 11
 - 64-bit Windows for published builds
 - An OpenAI-compatible API endpoint
-- Internet access only if your configured endpoint or update checks require it
+- Internet access only if your endpoint or update checks require it
 
 ## Documentation
 
@@ -199,7 +204,7 @@ python -m pip install -r requirements.txt
 python main.py
 ```
 
-Run the test suite:
+Run the tests:
 
 ```powershell
 python -m compileall -q core app ui main.py
@@ -212,27 +217,21 @@ Build the Windows application:
 python build.py
 ```
 
-See [Development](docs/development.md) for build, test, packaging, and source layout details.
+The packaged executable is produced as `dist\Bragi\Bragi.exe`.
 
-## Independent maintenance
+## Project lineage
 
-This repository is maintained as an **independent fork** with its own roadmap, releases, Windows packaging, updater endpoint, tests, and release automation. Published builds and update checks are produced from `isyuricunha/Quill` and do not depend on an upstream release cadence.
-
-The original copyright notice and GPL terms remain preserved in [LICENSE](LICENSE).
-
-## Credits
-
-Quill builds on the original Quill project and retains its licensing notice. The original project also cited [WritingTools](https://github.com/theJayTea/WritingTools) as an inspiration.
+Bragi is independently maintained and has its own roadmap and distribution pipeline. It evolved from the Quill project, whose original copyright notice remains preserved in the license and project history. Quill also cited [WritingTools](https://github.com/theJayTea/WritingTools) as an inspiration.
 
 Core technologies include [PySide6](https://doc.qt.io/qtforpython-6/), [pynput](https://github.com/moses-palmer/pynput), and [pyperclip](https://github.com/asweigart/pyperclip).
 
 ## License
 
-Quill is distributed under the **GNU General Public License v3.0 or later**. See [LICENSE](LICENSE).
+Bragi is distributed under the **GNU General Public License v3.0 or later**. See [LICENSE](LICENSE).
 
 <div align="center">
 
-**Quill** 🪶
+**Bragi**
 
 Small, fast, system-wide AI writing assistance for Windows.
 
