@@ -2,10 +2,13 @@
 Bragi build script.
 
 Builds the Windows onedir application with PyInstaller. The selected Bragi
-artwork is kept as a canonical PNG and converted into the Windows icon formats
-needed by PyInstaller, the packaged runtime, and Inno Setup.
+artwork is stored as Base64 text because the repository connector does not
+reliably preserve uploaded binary image blobs. The build materializes and
+verifies the exact PNG before generating the Windows icon formats.
 """
 
+import base64
+import hashlib
 import os
 import shutil
 import struct
@@ -14,7 +17,9 @@ import sys
 from pathlib import Path
 
 
-ICON_SOURCE = Path("resources") / "icon_source.png"
+ICON_SOURCE_B64 = Path("resources") / "icon_source.b64"
+ICON_SOURCE_SHA256 = "5ff1126845c1a77cca14158a0b97a3f72a20f8ae1a6a5a441c424e0f7804c3d6"
+MATERIALIZED_ICON_SOURCE = Path("build") / "icon_source.png"
 BUILD_ICON = Path("build") / "icon.ico"
 BUILD_ICON_ALPHA = Path("build") / "icon_alpha.ico"
 SETUP_ICON = Path("build") / "setup_icon.ico"
@@ -70,21 +75,39 @@ def check_requirements():
             print(f"  {package_name} installed successfully!")
 
 
+def materialize_icon_source():
+    """Decode and verify the canonical Bragi icon artwork."""
+    if not ICON_SOURCE_B64.exists():
+        raise FileNotFoundError(f"Canonical icon source not found: {ICON_SOURCE_B64}")
+
+    encoded = ICON_SOURCE_B64.read_text(encoding="ascii")
+    image_bytes = base64.b64decode(encoded, validate=False)
+    digest = hashlib.sha256(image_bytes).hexdigest()
+    if digest != ICON_SOURCE_SHA256:
+        raise RuntimeError(
+            "Bragi icon source checksum mismatch: "
+            f"expected {ICON_SOURCE_SHA256}, got {digest}"
+        )
+
+    MATERIALIZED_ICON_SOURCE.parent.mkdir(parents=True, exist_ok=True)
+    MATERIALIZED_ICON_SOURCE.write_bytes(image_bytes)
+    print(
+        f"\nMaterialized canonical Bragi icon: {MATERIALIZED_ICON_SOURCE} "
+        f"({len(image_bytes)} bytes, SHA-256 {digest})"
+    )
+
+
 def prepare_app_icons():
     """Generate valid runtime ICO files from the canonical PNG artwork."""
     from PIL import Image
 
-    if not ICON_SOURCE.exists():
-        raise FileNotFoundError(f"Canonical icon source not found: {ICON_SOURCE}")
-
-    BUILD_ICON.parent.mkdir(parents=True, exist_ok=True)
-
-    with Image.open(ICON_SOURCE) as source:
+    with Image.open(MATERIALIZED_ICON_SOURCE) as source:
         image = source.convert("RGBA")
+        image.load()
         image.save(BUILD_ICON, format="ICO", sizes=list(ICON_SIZES))
         image.save(BUILD_ICON_ALPHA, format="ICO", sizes=list(ICON_SIZES))
 
-    print(f"\nPrepared application icon: {BUILD_ICON}")
+    print(f"Prepared application icon: {BUILD_ICON}")
 
 
 def build_exe():
@@ -99,7 +122,7 @@ def build_exe():
         f"--icon={BUILD_ICON}",
         "--add-data=resources/default_prompts.json;resources",
         "--add-data=resources/version.txt;resources",
-        "--add-data=resources/icon_source.png;resources",
+        f"--add-data={MATERIALIZED_ICON_SOURCE};resources",
         f"--add-data={BUILD_ICON};resources",
         f"--add-data={BUILD_ICON_ALPHA};resources",
         "--collect-submodules=core",
@@ -198,8 +221,9 @@ def prepare_installer_icon():
     """Create an Inno-compatible ICO from the same canonical artwork."""
     from PIL import Image
 
-    with Image.open(ICON_SOURCE) as source:
+    with Image.open(MATERIALIZED_ICON_SOURCE) as source:
         source = source.convert("RGBA")
+        source.load()
         frames = []
         for size in (16, 32, 48, 64, 128, 256):
             resized = source.resize((size, size), Image.Resampling.LANCZOS)
@@ -250,6 +274,7 @@ def main():
 
     clean_build_files()
     check_requirements()
+    materialize_icon_source()
     prepare_app_icons()
     success = build_exe()
 
