@@ -51,6 +51,12 @@ def build_exe():
         "--add-data=resources/version.txt;resources",
         "--add-data=resources/icon.ico;resources",
         "--add-data=resources/icon_alpha.ico;resources",
+        # Explicitly collect Quill's internal packages. PyInstaller normally
+        # discovers these imports, but releases must not depend on that heuristic.
+        "--collect-submodules=core",
+        "--collect-submodules=app",
+        "--collect-submodules=ui",
+        "--hidden-import=core.prompt_manager",
         "--collect-submodules=PySide6.QtCore",
         "--collect-submodules=PySide6.QtGui",
         "--collect-submodules=PySide6.QtWidgets",
