@@ -1,11 +1,13 @@
 """
 Bragi build script.
 
-Builds the Windows onedir application with PyInstaller.
+Builds the Windows onedir application with PyInstaller and prepares a
+classic ICO for Inno Setup from the application's selected icon artwork.
 """
 
 import os
 import shutil
+import struct
 import subprocess
 import sys
 from pathlib import Path
@@ -118,6 +120,87 @@ def build_exe():
     return True
 
 
+def _encode_classic_icon_frame(image):
+    """Encode one RGBA image as a classic 32-bit Windows ICO DIB frame."""
+    image = image.convert("RGBA")
+    width, height = image.size
+    pixels = image.load()
+
+    xor_bitmap = bytearray()
+    for y in range(height - 1, -1, -1):
+        for x in range(width):
+            red, green, blue, alpha = pixels[x, y]
+            xor_bitmap.extend((blue, green, red, alpha))
+
+    mask_stride = ((width + 31) // 32) * 4
+    and_mask = bytearray(mask_stride * height)
+    for row, y in enumerate(range(height - 1, -1, -1)):
+        row_offset = row * mask_stride
+        for x in range(width):
+            if pixels[x, y][3] < 128:
+                and_mask[row_offset + (x // 8)] |= 0x80 >> (x % 8)
+
+    bitmap_header = struct.pack(
+        "<IIIHHIIIIII",
+        40,
+        width,
+        height * 2,
+        1,
+        32,
+        0,
+        len(xor_bitmap),
+        0,
+        0,
+        0,
+        0,
+    )
+    return bitmap_header + bytes(xor_bitmap) + bytes(and_mask)
+
+
+def prepare_installer_icon():
+    """Create an Inno-compatible ICO without changing the app's icon artwork."""
+    from PIL import Image
+
+    source_path = Path("resources") / "icon.ico"
+    output_path = Path("build") / "setup_icon.ico"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with Image.open(source_path) as source:
+        source = source.convert("RGBA")
+        sizes = (16, 32, 48, 64, 128, 256)
+        frames = []
+        for size in sizes:
+            resized = source.resize((size, size), Image.Resampling.LANCZOS)
+            frames.append((size, _encode_classic_icon_frame(resized)))
+
+    offset = 6 + (16 * len(frames))
+    directory_entries = []
+    for size, payload in frames:
+        dimension = 0 if size == 256 else size
+        directory_entries.append(
+            struct.pack(
+                "<BBBBHHII",
+                dimension,
+                dimension,
+                0,
+                0,
+                1,
+                32,
+                len(payload),
+                offset,
+            )
+        )
+        offset += len(payload)
+
+    icon_data = (
+        struct.pack("<HHH", 0, 1, len(frames))
+        + b"".join(directory_entries)
+        + b"".join(payload for _, payload in frames)
+    )
+    output_path.write_bytes(icon_data)
+    print(f"\nPrepared Inno Setup icon: {output_path} ({len(icon_data)} bytes)")
+
+
 def main():
     print("=" * 50)
     print("Bragi Build Script")
@@ -138,6 +221,7 @@ def main():
     success = build_exe()
 
     if success:
+        prepare_installer_icon()
         print("\nBuild completed successfully!")
         sys.exit(0)
 

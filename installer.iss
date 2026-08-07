@@ -25,7 +25,9 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir=installer-output
 OutputBaseFilename=Bragi-v{#AppVersion}-setup-windows-x64
-SetupIconFile=resources\icon.ico
+; build.py materializes a classic DIB-backed ICO for Inno Setup. The app
+; itself continues to use resources\icon.ico with the selected Bragi artwork.
+SetupIconFile=build\setup_icon.ico
 UninstallDisplayIcon={app}\Bragi.exe
 Compression=lzma2
 SolidCompression=yes
