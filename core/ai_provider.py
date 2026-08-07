@@ -81,7 +81,8 @@ class OAICompatibleProvider:
         messages: List[Dict[str, str]],
         temperature: float = 0.7,
         max_tokens: Optional[int] = None,
-        additional_params: Optional[Dict[str, Any]] = None
+        additional_params: Optional[Dict[str, Any]] = None,
+        model: Optional[str] = None,
     ) -> str:
         """
         채팅 완성 API 호출 (비스트리밍)
@@ -93,6 +94,7 @@ class OAICompatibleProvider:
             temperature: 온도 (0.0~2.0, 기본값 0.7)
             max_tokens: 최대 토큰 수 (None이면 제한 없음)
             additional_params: 추가 파라미터 (reasoning_effort, top_p 등)
+            model: 이 요청에서만 사용할 선택적 모델 오버라이드
 
         Returns:
             AI 응답 텍스트
@@ -105,9 +107,10 @@ class OAICompatibleProvider:
             raise ValueError("API provider not configured. Call configure() first.")
 
         try:
+            selected_model = (model or "").strip() or self.model
+
             # 요청 페이로드 구성
             payload = {
-                "model": self.model,
                 "messages": messages,
                 "temperature": temperature,
                 "stream": False  # 비스트리밍
@@ -120,8 +123,11 @@ class OAICompatibleProvider:
             if additional_params:
                 payload.update(additional_params)
 
+            # 전용 model 설정이 additional_params에 의해 덮이지 않도록 마지막에 적용
+            payload["model"] = selected_model
+
             logger.debug(f"Calling API: {self.base_url}/chat/completions")
-            logger.debug(f"Model: {self.model}, messages count: {len(messages)}")
+            logger.debug(f"Model: {selected_model}, messages count: {len(messages)}")
 
             # API 호출
             response = self.client.post(

@@ -124,12 +124,26 @@ class PromptManager:
             return 0.7
         return prompt_info.get("temperature", 0.7)
 
+    def get_model(self, prompt_key: str) -> Optional[str]:
+        """Return an optional model override for a prompt."""
+        prompt_info = self.get_prompt_info(prompt_key)
+        if not prompt_info:
+            return None
+
+        model = prompt_info.get("model", "")
+        if not isinstance(model, str):
+            return None
+
+        model = model.strip()
+        return model or None
+
     def add_prompt(
         self,
         prompt_key: str,
         name: str,
         template: str,
         temperature: float = 0.7,
+        model: Optional[str] = None,
     ) -> None:
         """Add a new user prompt."""
         new_prompt = {
@@ -137,6 +151,9 @@ class PromptManager:
             "template": template,
             "temperature": temperature,
         }
+        if model and model.strip():
+            new_prompt["model"] = model.strip()
+
         self.user_prompts[prompt_key] = new_prompt
         self.prompts[prompt_key] = new_prompt.copy()
         logger.info("Added user prompt: %s", prompt_key)
@@ -147,6 +164,7 @@ class PromptManager:
         name: Optional[str] = None,
         template: Optional[str] = None,
         temperature: Optional[float] = None,
+        model: Optional[str] = None,
     ) -> None:
         """Update an existing prompt and store the changes as a user override."""
         if prompt_key not in self.prompts:
@@ -164,13 +182,25 @@ class PromptManager:
         if temperature is not None:
             self.user_prompts[prompt_key]["temperature"] = temperature
             self.prompts[prompt_key]["temperature"] = temperature
+        if model is not None:
+            normalized_model = model.strip()
+            if normalized_model:
+                self.user_prompts[prompt_key]["model"] = normalized_model
+                self.prompts[prompt_key]["model"] = normalized_model
+            else:
+                self.user_prompts[prompt_key].pop("model", None)
+                self.prompts[prompt_key].pop("model", None)
 
         logger.info("Updated user prompt: %s", prompt_key)
 
     def save(self) -> None:
         """Save user prompt overrides to disk."""
         if not self.user_prompts:
-            logger.debug("No user prompts to save")
+            if self.user_prompts_path.exists():
+                self.user_prompts_path.unlink()
+                logger.info("Removed empty user prompt overrides file")
+            else:
+                logger.debug("No user prompts to save")
             return
 
         self.user_prompts_path.parent.mkdir(parents=True, exist_ok=True)

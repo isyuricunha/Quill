@@ -457,15 +457,25 @@ class QuillApp(QApplication):
             # 프롬프트 생성
             messages = self.prompt_manager.get_messages(prompt_key, text, instruction)
             temperature = self.prompt_manager.get_temperature(prompt_key)
+            model_override = self.prompt_manager.get_model(prompt_key)
 
             # 추가 파라미터 가져오기
             additional_params = self.config_manager.get("api.additional_params", {})
 
-            logger.debug(f"Calling AI: {len(messages)} messages, temp={temperature}")
+            logger.debug(
+                "Calling AI: %s messages, temp=%s, model=%s",
+                len(messages),
+                temperature,
+                model_override or self.ai_provider.model,
+            )
 
             # AI 호출
             response = self.ai_provider.complete(
-                messages, temperature, None, additional_params
+                messages,
+                temperature,
+                None,
+                additional_params,
+                model=model_override,
             )
 
             logger.info(f"AI response received (length: {len(response)})")

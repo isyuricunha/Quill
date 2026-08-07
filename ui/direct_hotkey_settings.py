@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QGroupBox,
     QLabel,
+    QLineEdit,
     QMessageBox,
 )
 
@@ -106,6 +107,66 @@ class SettingsWindow(BaseSettingsWindow):
         direct_group.setLayout(direct_layout)
         layout.insertWidget(max(0, layout.count() - 1), direct_group)
         return tab
+
+    def _create_prompts_tab(self):
+        tab = super()._create_prompts_tab()
+
+        prompts_group = tab.layout().itemAt(0).widget()
+        prompts_layout = prompts_group.layout()
+
+        self.prompt_model_edit = QLineEdit()
+        self.prompt_model_edit.setPlaceholderText("Leave empty to use the global model")
+        self.prompt_model_edit.setToolTip(
+            "Optional. When empty, this prompt uses the model configured in the API tab."
+        )
+        prompts_layout.insertRow(3, "Model override (optional):", self.prompt_model_edit)
+
+        current_index = self.prompt_combo.currentIndex()
+        if current_index >= 0:
+            self._on_prompt_selected(current_index)
+
+        return tab
+
+    def _on_prompt_selected(self, index):
+        super()._on_prompt_selected(index)
+
+        if index < 0 or not self.prompt_manager or not hasattr(self, "prompt_model_edit"):
+            return
+
+        prompt_key = self.prompt_combo.itemData(index)
+        prompt = self.prompt_manager.get_prompt_info(prompt_key) or {}
+        self.prompt_model_edit.setText(prompt.get("model", ""))
+
+    def _save_current_prompt(self) -> bool:
+        if not super()._save_current_prompt():
+            return False
+
+        if not self.prompt_manager or not hasattr(self, "prompt_model_edit"):
+            return True
+
+        current_index = self.prompt_combo.currentIndex()
+        if current_index < 0:
+            return True
+
+        prompt_key = self.prompt_combo.itemData(current_index)
+        model_override = self.prompt_model_edit.text().strip()
+        self.prompt_manager.update_prompt(prompt_key, model=model_override)
+        self.prompt_manager.save()
+        return True
+
+    def _on_reset_prompt(self):
+        super()._on_reset_prompt()
+
+        if not self.prompt_manager or not hasattr(self, "prompt_model_edit"):
+            return
+
+        current_index = self.prompt_combo.currentIndex()
+        if current_index < 0:
+            return
+
+        prompt_key = self.prompt_combo.itemData(current_index)
+        prompt = self.prompt_manager.get_prompt_info(prompt_key) or {}
+        self.prompt_model_edit.setText(prompt.get("model", ""))
 
     def _load_current_settings(self):
         super()._load_current_settings()
