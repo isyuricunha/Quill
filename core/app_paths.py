@@ -128,7 +128,7 @@ def migrate_legacy_user_data(target_dir: Path) -> None:
 def get_user_data_dir() -> Path:
     """Return Quill's writable user-data directory for the current build mode.
 
-    Installed builds use %LOCALAPPDATA%\Quill. Portable and development builds
+    Installed builds use %LOCALAPPDATA%/Quill. Portable and development builds
     keep their data beside the executable/project in ./data.
     """
     if is_installed_build():

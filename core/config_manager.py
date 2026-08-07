@@ -43,7 +43,7 @@ class ConfigManager:
 
         Args:
             config_path: Explicit config file path. When omitted, installed builds
-                use %LOCALAPPDATA%\Quill\config.json and portable builds use
+                use %LOCALAPPDATA%/Quill/config.json and portable builds use
                 ./data/config.json beside Quill.exe.
         """
         if config_path is None:

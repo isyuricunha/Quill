@@ -33,7 +33,14 @@ jobs:
         shell: pwsh
         run: |
           python -m compileall -q core app ui main.py
+          if ($LASTEXITCODE -ne 0) {
+            throw "Python source compilation failed with exit code $LASTEXITCODE."
+          }
+
           python -m unittest discover -s tests -v
+          if ($LASTEXITCODE -ne 0) {
+            throw "Unit tests failed with exit code $LASTEXITCODE."
+          }
 
       - name: Determine release version
         id: version

@@ -26,7 +26,7 @@ class PromptManager:
             prompts_path: Built-in prompts file. Defaults to the bundled
                 resources/default_prompts.json.
             user_prompts_path: User prompt overrides. Installed builds use
-                %LOCALAPPDATA%\Quill\user_prompts.json, while portable builds use
+                %LOCALAPPDATA%/Quill/user_prompts.json, while portable builds use
                 ./data/user_prompts.json beside Quill.exe.
         """
         if prompts_path is None:
