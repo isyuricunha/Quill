@@ -5,6 +5,7 @@ Builds the Windows onedir application with PyInstaller and prepares a
 classic ICO for Inno Setup from the application's selected icon artwork.
 """
 
+import io
 import os
 import shutil
 import struct
@@ -157,6 +158,53 @@ def _encode_classic_icon_frame(image):
     return bitmap_header + bytes(xor_bitmap) + bytes(and_mask)
 
 
+def _load_largest_png_icon_frame(icon_path):
+    """Extract the largest PNG-backed frame from an ICO without Pillow's ICO parser."""
+    from PIL import Image
+
+    data = Path(icon_path).read_bytes()
+    if len(data) < 6:
+        raise ValueError(f"Icon file is too small: {icon_path}")
+
+    reserved, icon_type, count = struct.unpack_from("<HHH", data, 0)
+    if reserved != 0 or icon_type != 1 or count < 1:
+        raise ValueError(f"Invalid ICO header: {icon_path}")
+
+    best = None
+    for index in range(count):
+        entry_offset = 6 + (index * 16)
+        if entry_offset + 16 > len(data):
+            raise ValueError(f"Truncated ICO directory: {icon_path}")
+
+        width_byte, height_byte, _, _, _, _, size, offset = struct.unpack_from(
+            "<BBBBHHII", data, entry_offset
+        )
+        width = width_byte or 256
+        height = height_byte or 256
+        end = offset + size
+        if offset < 0 or size <= 0 or end > len(data):
+            continue
+
+        payload = data[offset:end]
+        if not payload.startswith(b"\x89PNG\r\n\x1a\n"):
+            continue
+
+        score = width * height
+        if best is None or score > best[0]:
+            best = (score, width, height, payload)
+
+    if best is None:
+        raise ValueError(f"No PNG-backed frame found in icon: {icon_path}")
+
+    _, width, height, payload = best
+    with Image.open(io.BytesIO(payload)) as frame:
+        image = frame.convert("RGBA")
+        image.load()
+
+    print(f"  Extracted source icon frame: {width}x{height}")
+    return image
+
+
 def prepare_installer_icon():
     """Create an Inno-compatible ICO without changing the app's icon artwork."""
     from PIL import Image
@@ -165,13 +213,12 @@ def prepare_installer_icon():
     output_path = Path("build") / "setup_icon.ico"
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    with Image.open(source_path) as source:
-        source = source.convert("RGBA")
-        sizes = (16, 32, 48, 64, 128, 256)
-        frames = []
-        for size in sizes:
-            resized = source.resize((size, size), Image.Resampling.LANCZOS)
-            frames.append((size, _encode_classic_icon_frame(resized)))
+    source = _load_largest_png_icon_frame(source_path)
+    sizes = (16, 32, 48, 64, 128, 256)
+    frames = []
+    for size in sizes:
+        resized = source.resize((size, size), Image.Resampling.LANCZOS)
+        frames.append((size, _encode_classic_icon_frame(resized)))
 
     offset = 6 + (16 * len(frames))
     directory_entries = []
