@@ -1,0 +1,142 @@
+name: Auto Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: auto-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Determine release version
+        id: version
+        shell: pwsh
+        run: |
+          $latestTag = git tag --list "v[0-9]*" --sort=-v:refname | Select-Object -First 1
+
+          if ($latestTag) {
+            $baseVersion = $latestTag.TrimStart('v')
+            $baseRef = $latestTag
+          } else {
+            # The upstream project released v1.0.8 from this commit before the fork.
+            $baseVersion = "1.0.8"
+            $baseRef = "9afb09c43dc68720dfa177b14973c1e50f2e3909"
+          }
+
+          $messages = (git log "$baseRef..HEAD" --format="%B" | Out-String)
+
+          $bump = "none"
+          if ($messages -match '(?im)^[a-z]+(?:\([^)]+\))?!:' -or $messages -match '(?im)^BREAKING CHANGE:') {
+            $bump = "major"
+          } elseif ($messages -match '(?im)^feat(?:\([^)]+\))?:') {
+            $bump = "minor"
+          } elseif ($messages -match '(?im)^(fix|perf|refactor)(?:\([^)]+\))?:') {
+            $bump = "patch"
+          }
+
+          if ($bump -eq "none") {
+            "should_release=false" >> $env:GITHUB_OUTPUT
+            "base_ref=$baseRef" >> $env:GITHUB_OUTPUT
+            Write-Host "No releasable Conventional Commit found."
+            exit 0
+          }
+
+          $parts = $baseVersion.Split('.')
+          $major = [int]$parts[0]
+          $minor = [int]$parts[1]
+          $patch = [int]$parts[2]
+
+          switch ($bump) {
+            "major" {
+              $major++
+              $minor = 0
+              $patch = 0
+            }
+            "minor" {
+              $minor++
+              $patch = 0
+            }
+            "patch" {
+              $patch++
+            }
+          }
+
+          $tag = "v$major.$minor.$patch"
+          "should_release=true" >> $env:GITHUB_OUTPUT
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "base_ref=$baseRef" >> $env:GITHUB_OUTPUT
+          Write-Host "Release version: $tag ($bump bump from v$baseVersion)"
+
+      - name: Install dependencies
+        if: steps.version.outputs.should_release == 'true'
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pyinstaller
+
+      - name: Build Quill
+        if: steps.version.outputs.should_release == 'true'
+        shell: pwsh
+        run: python build.py
+
+      - name: Package Windows build
+        if: steps.version.outputs.should_release == 'true'
+        id: package
+        shell: pwsh
+        run: |
+          $tag = "${{ steps.version.outputs.tag }}"
+          $zip = "Quill-$tag-windows.zip"
+          Compress-Archive -Path "dist\Quill\*" -DestinationPath $zip -Force
+          "zip=$zip" >> $env:GITHUB_OUTPUT
+
+      - name: Create release notes
+        if: steps.version.outputs.should_release == 'true'
+        shell: pwsh
+        run: |
+          $tag = "${{ steps.version.outputs.tag }}"
+          $baseRef = "${{ steps.version.outputs.base_ref }}"
+          $changes = git log "$baseRef..HEAD" --pretty=format:"- %s"
+
+          @"
+          ## Quill $tag
+
+          ### Changes
+          $($changes -join "`n")
+
+          ### Download
+          Extract `Quill-$tag-windows.zip` and run `Quill.exe`.
+
+          ### Requirements
+          - Windows 10/11
+          "@ | Set-Content -Path release-notes.md -Encoding utf8
+
+      - name: Publish GitHub Release
+        if: steps.version.outputs.should_release == 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "${{ steps.version.outputs.tag }}"
+          $zip = "${{ steps.package.outputs.zip }}"
+          gh release create $tag $zip --title "Quill $tag" --notes-file release-notes.md --target "${{ github.sha }}"
