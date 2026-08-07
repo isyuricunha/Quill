@@ -6,7 +6,7 @@ pynput을 사용하여 Windows 전역 핫키를 감지합니다.
 
 import logging
 import time
-from typing import Optional
+from typing import Dict, Optional
 from PySide6.QtCore import QObject, Signal
 
 from pynput import keyboard
@@ -22,6 +22,7 @@ class HotkeyManager(QObject):
     # Signal: 핫키가 눌렸을 때 (x, y 마우스 위치)
     hotkey_pressed = Signal(int, int)
     quick_hotkey_pressed = Signal(int, int)  # 빠른 반복 핫키
+    action_hotkey_pressed = Signal(str, int, int)  # 직접 액션 핫키 (prompt_key, x, y)
 
     def __init__(self):
         """HotkeyManager 초기화"""
@@ -30,29 +31,39 @@ class HotkeyManager(QObject):
         self.listener: Optional[keyboard.GlobalHotKeys] = None
         self.hotkey: str = "<ctrl>+<space>"  # 기본 핫키
         self.quick_hotkey: str = ""  # 빠른 반복 핫키 (빈 문자열이면 비활성화)
+        self.action_hotkeys: Dict[str, str] = {}  # prompt_key -> hotkey
         self.is_active: bool = True
         self.mouse = MouseController()
 
-        # Quick hotkey가 트리거되면 main hotkey 억제 (충돌 방지)
-        self._quick_hotkey_timestamp: float = 0
+        # 보조 핫키가 트리거되면 main hotkey 억제 (부분 조합 충돌 방지)
+        self._secondary_hotkey_timestamp: float = 0
         self._suppress_duration: float = 0.2  # 200ms
 
         logger.debug("HotkeyManager initialized")
 
-    def start(self, hotkey: Optional[str] = None, quick_hotkey: Optional[str] = None):
+    def start(
+        self,
+        hotkey: Optional[str] = None,
+        quick_hotkey: Optional[str] = None,
+        action_hotkeys: Optional[Dict[str, str]] = None,
+    ):
         """
         핫키 리스닝 시작
 
         Args:
             hotkey: 메인 핫키 문자열 (예: "<ctrl>+<space>")
                    None이면 현재 핫키 사용
-            quick_hotkey: 빠른 반복 핫키 문자열 (예: "<ctrl>+<alt>+<space>")
+            quick_hotkey: 빠른 반복 핫키 문자열
                    None이면 현재 설정 사용, 빈 문자열이면 비활성화
+            action_hotkeys: prompt_key -> hotkey 딕셔너리
+                   None이면 현재 설정 사용, 빈 값은 비활성화
         """
         if hotkey:
             self.hotkey = hotkey
         if quick_hotkey is not None:
             self.quick_hotkey = quick_hotkey
+        if action_hotkeys is not None:
+            self.action_hotkeys = dict(action_hotkeys)
 
         # 이미 실행 중이면 중지
         if self.listener and self.listener.running:
@@ -61,9 +72,42 @@ class HotkeyManager(QObject):
         try:
             # 핫키 딕셔너리 구성
             hotkeys_dict = {self.hotkey: self._on_hotkey_activated}
+            registered = {self.hotkey.lower()}
+
             if self.quick_hotkey:
-                hotkeys_dict[self.quick_hotkey] = self._on_quick_hotkey_activated
-                logger.info(f"Quick hotkey registered: {self.quick_hotkey}")
+                normalized = self.quick_hotkey.lower()
+                if normalized in registered:
+                    logger.warning(
+                        "Quick hotkey conflicts with another hotkey and was skipped: %s",
+                        self.quick_hotkey,
+                    )
+                else:
+                    hotkeys_dict[self.quick_hotkey] = self._on_quick_hotkey_activated
+                    registered.add(normalized)
+                    logger.info(f"Quick hotkey registered: {self.quick_hotkey}")
+
+            for action_key, action_hotkey in self.action_hotkeys.items():
+                if not action_hotkey:
+                    continue
+
+                normalized = action_hotkey.lower()
+                if normalized in registered:
+                    logger.warning(
+                        "Direct action hotkey for %s conflicts with another hotkey and was skipped: %s",
+                        action_key,
+                        action_hotkey,
+                    )
+                    continue
+
+                hotkeys_dict[action_hotkey] = (
+                    lambda key=action_key: self._on_action_hotkey_activated(key)
+                )
+                registered.add(normalized)
+                logger.info(
+                    "Direct action hotkey registered: %s=%s",
+                    action_key,
+                    action_hotkey,
+                )
 
             logger.info(f"Registering hotkeys: {list(hotkeys_dict.keys())}")
 
@@ -71,7 +115,12 @@ class HotkeyManager(QObject):
             self.listener = keyboard.GlobalHotKeys(hotkeys_dict)
 
             self.listener.start()
-            logger.info(f"Hotkey listener started: main={self.hotkey}, quick={self.quick_hotkey or 'disabled'}")
+            logger.info(
+                "Hotkey listener started: main=%s, quick=%s, actions=%s",
+                self.hotkey,
+                self.quick_hotkey or "disabled",
+                {k: v for k, v in self.action_hotkeys.items() if v},
+            )
 
         except Exception as e:
             logger.error(f"Failed to start hotkey listener: {e}")
@@ -84,20 +133,31 @@ class HotkeyManager(QObject):
             self.listener = None
             logger.info("Hotkey listener stopped")
 
-    def set_hotkeys(self, hotkey: Optional[str] = None, quick_hotkey: Optional[str] = None):
+    def set_hotkeys(
+        self,
+        hotkey: Optional[str] = None,
+        quick_hotkey: Optional[str] = None,
+        action_hotkeys: Optional[Dict[str, str]] = None,
+    ):
         """
         핫키 변경 (리스너 재시작)
 
         Args:
             hotkey: 새 메인 핫키 문자열
             quick_hotkey: 새 빠른 반복 핫키 문자열
+            action_hotkeys: 새 직접 액션 핫키 딕셔너리
         """
         if hotkey:
             logger.info(f"Changing main hotkey: {self.hotkey} -> {hotkey}")
             self.hotkey = hotkey
         if quick_hotkey is not None:
-            logger.info(f"Changing quick hotkey: {self.quick_hotkey} -> {quick_hotkey or 'disabled'}")
+            logger.info(
+                f"Changing quick hotkey: {self.quick_hotkey} -> {quick_hotkey or 'disabled'}"
+            )
             self.quick_hotkey = quick_hotkey
+        if action_hotkeys is not None:
+            logger.info("Changing direct action hotkeys: %s", action_hotkeys)
+            self.action_hotkeys = dict(action_hotkeys)
 
         if self.is_active:
             self.start()
@@ -118,9 +178,9 @@ class HotkeyManager(QObject):
             logger.debug("Hotkey pressed but paused, ignoring")
             return
 
-        # Quick hotkey가 최근에 눌렸으면 main hotkey 무시 (충돌 방지)
-        if time.time() - self._quick_hotkey_timestamp < self._suppress_duration:
-            logger.debug("Main hotkey suppressed due to recent quick hotkey")
+        # 보조 핫키가 최근에 눌렸으면 main hotkey 무시 (부분 조합 충돌 방지)
+        if time.time() - self._secondary_hotkey_timestamp < self._suppress_duration:
+            logger.debug("Main hotkey suppressed due to recent secondary hotkey")
             return
 
         try:
@@ -138,7 +198,7 @@ class HotkeyManager(QObject):
     def _on_quick_hotkey_activated(self):
         """빠른 반복 핫키가 눌렸을 때 콜백"""
         # 타임스탬프 기록 (main hotkey 억제용)
-        self._quick_hotkey_timestamp = time.time()
+        self._secondary_hotkey_timestamp = time.time()
 
         if not self.is_active:
             logger.debug("Quick hotkey pressed but paused, ignoring")
@@ -156,6 +216,27 @@ class HotkeyManager(QObject):
         except Exception as e:
             logger.error(f"Error in quick hotkey callback: {e}")
 
+    def _on_action_hotkey_activated(self, prompt_key: str):
+        """직접 액션 핫키가 눌렸을 때 콜백"""
+        # 타임스탬프 기록 (main hotkey 억제용)
+        self._secondary_hotkey_timestamp = time.time()
+
+        if not self.is_active:
+            logger.debug("Direct action hotkey pressed but paused, ignoring")
+            return
+
+        try:
+            x, y = self.mouse.position
+            logger.debug(
+                "Direct action hotkey activated: %s at position (%s, %s)",
+                prompt_key,
+                x,
+                y,
+            )
+            self.action_hotkey_pressed.emit(prompt_key, x, y)
+        except Exception as e:
+            logger.error(f"Error in direct action hotkey callback: {e}")
+
     def is_running(self) -> bool:
         """
         핫키 리스너가 실행 중인지 확인
@@ -170,7 +251,6 @@ class HotkeyManager(QObject):
 if __name__ == "__main__":
     import sys
     from PySide6.QtWidgets import QApplication
-    import time
 
     logging.basicConfig(level=logging.DEBUG)
 
@@ -186,7 +266,11 @@ if __name__ == "__main__":
         print(f"  Mouse position: ({x}, {y})")
         print(f"  Press Ctrl+C to exit\n")
 
+    def on_action_hotkey_pressed(prompt_key, x, y):
+        print(f"\n[Direct Action Hotkey Pressed!] {prompt_key} at ({x}, {y})")
+
     hotkey_manager.hotkey_pressed.connect(on_hotkey_pressed)
+    hotkey_manager.action_hotkey_pressed.connect(on_action_hotkey_pressed)
 
     # 핫키 시작
     print("Starting hotkey listener...")
