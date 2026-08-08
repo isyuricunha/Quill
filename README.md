@@ -34,7 +34,8 @@ Bragi evolved from the Quill codebase and is now maintained as an independent pr
 - **Summarize** for concise summaries that preserve important facts and caveats
 - **Translate** with a configurable target language
 - **Custom Instruction** for one-off transformations
-- **Direct action hotkeys** for Grammar Check, Rewrite, Professional, and Translate
+- **Custom Actions** with their own prompt, temperature, model override, optional hotkey, and popup visibility
+- **Direct action hotkeys** for built-in and user-created actions
 - **Quick Repeat** to reuse the last action without reopening the popup
 - **Per-prompt model override** while keeping a global default model
 - **Editable ChatML prompts** with `{{text}}` and `{{instruction}}` variables
@@ -81,9 +82,19 @@ See [Getting Started](docs/getting-started.md) for the full walkthrough.
 | Translate | `0.3` | Produces a natural translation into the configured target language |
 | Custom | `0.7` | Applies the instruction you provide to the selected text |
 
-Every prompt can be edited from **Settings > Prompts**, including its temperature, template, and optional model override.
+Every built-in prompt can be edited from **Settings > Prompts**, including its temperature, template, and optional model override.
 
 More detail: [Actions and Prompts](docs/actions-and-prompts.md).
+
+## Custom Actions
+
+Open **Settings > Custom Actions** to create reusable actions for tasks you do repeatedly.
+
+Each Custom Action has a name, ChatML prompt, temperature, optional model override, optional global hotkey, and a toggle controlling whether it appears in the popup. Custom Actions use the same processing pipeline as built-in actions, so they work with direct execution and Quick Repeat too.
+
+The prompt must contain `{{text}}`, which is replaced with the current selection.
+
+More detail: [Custom Actions](docs/custom-actions.md).
 
 ## Hotkeys
 
@@ -96,18 +107,19 @@ More detail: [Actions and Prompts](docs/actions-and-prompts.md).
 | Professional directly | Disabled by default |
 | Translate directly | `Ctrl+Alt+T` |
 
-All direct action hotkeys are optional and configurable. A direct action processes the selected text immediately without showing the popup.
+All direct action hotkeys are optional and configurable. Custom Actions can define their own optional direct hotkey. A direct action processes the selected text immediately without showing the popup.
 
 More detail: [Hotkeys](docs/hotkeys.md).
 
 ## Settings
 
-Bragi organizes configuration into four tabs:
+Bragi organizes configuration into five tabs:
 
 - **General**: Start with Windows, translation target language, update checks
 - **API**: Base URL, API key, global model, additional JSON parameters
-- **Hotkey**: main hotkey, Quick Repeat, direct action hotkeys
-- **Prompts**: name, temperature, optional model override, ChatML template, reset to default
+- **Hotkey**: main hotkey, Quick Repeat, built-in direct action hotkeys
+- **Custom Actions**: user-created actions, popup visibility, hotkeys, temperature and model overrides
+- **Prompts**: built-in prompt name, temperature, optional model override, ChatML template, reset to default
 
 The Translate target can be selected from common languages or typed manually.
 
@@ -134,7 +146,7 @@ Additional request parameters can be supplied as JSON:
 }
 ```
 
-Use the dedicated global model field or a per-prompt model override for `model`.
+Use the dedicated global model field or a per-prompt/model override for `model`.
 
 ## Installed vs portable data
 
@@ -145,7 +157,7 @@ Bragi separates user data based on build type:
 | Installed | `%LOCALAPPDATA%\Bragi` |
 | Portable | `data` beside `Bragi.exe` |
 
-The primary user files are `config.json` and `user_prompts.json`.
+The primary user files are `config.json` and `user_prompts.json`. Custom Actions are stored in `user_prompts.json` alongside prompt overrides.
 
 ### Upgrading from Quill
 
@@ -189,6 +201,7 @@ The full documentation lives in [`/docs`](docs/README.md):
 - [Getting Started](docs/getting-started.md)
 - [Configuration](docs/configuration.md)
 - [Actions and Prompts](docs/actions-and-prompts.md)
+- [Custom Actions](docs/custom-actions.md)
 - [Hotkeys](docs/hotkeys.md)
 - [Updates and Data](docs/updates-and-data.md)
 - [Security and Privacy](docs/security-and-privacy.md)

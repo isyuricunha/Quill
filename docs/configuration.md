@@ -38,7 +38,7 @@ The API key is stored encrypted with Windows DPAPI. Leaving the API-key field em
 
 ### Global model
 
-The model field is the default model used by all prompts that do not have a Model Override.
+The model field is the default model used by all prompts and Custom Actions that do not have a Model Override.
 
 ### Additional Params
 
@@ -51,7 +51,7 @@ Extra request parameters can be supplied as a JSON object:
 }
 ```
 
-Do not use Additional Params as the primary way to choose a model. Bragi applies its global or per-prompt model after these parameters are merged.
+Do not use Additional Params as the primary way to choose a model. Bragi applies its global or per-action model after these parameters are merged.
 
 ## Hotkey
 
@@ -59,11 +59,28 @@ The Hotkey tab contains:
 
 - Main Hotkey
 - Quick Repeat
-- Direct Action Hotkeys
+- built-in Direct Action Hotkeys
 
-Shortcuts must include Ctrl, Shift or Alt. Bragi rejects duplicate shortcuts and critical Windows combinations.
+Custom Action hotkeys are configured with each action under **Custom Actions**.
+
+Shortcuts must include Ctrl, Shift or Alt. Bragi rejects duplicate shortcuts across the main hotkey, Quick Repeat, built-in direct actions and Custom Actions, as well as critical Windows combinations.
 
 See [Hotkeys](hotkeys.md).
+
+## Custom Actions
+
+The Custom Actions tab lets you create reusable actions with:
+
+- name
+- temperature
+- optional model override
+- optional direct hotkey
+- popup visibility
+- ChatML prompt template
+
+Every Custom Action prompt must contain `{{text}}`.
+
+See [Custom Actions](custom-actions.md).
 
 ## Prompts
 
@@ -77,7 +94,7 @@ Every built-in prompt exposes:
 
 Leaving the model override empty uses the global API model.
 
-User prompt changes are written to `user_prompts.json`; built-in defaults remain in `resources/default_prompts.json`.
+User prompt changes and Custom Actions are written to `user_prompts.json`; built-in defaults remain in `resources/default_prompts.json`.
 
 See [Actions and Prompts](actions-and-prompts.md).
 

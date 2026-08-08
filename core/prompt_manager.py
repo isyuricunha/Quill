@@ -1,7 +1,8 @@
-"""Prompt template management for Bragi."""
+"""Prompt template and Custom Action management for Bragi."""
 
 import json
 import logging
+import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -14,7 +15,17 @@ logger = logging.getLogger(__name__)
 
 
 class PromptManager:
-    """Load built-in prompts, user overrides and rendered messages."""
+    """Load built-in prompts, user overrides, Custom Actions and rendered messages."""
+
+    CUSTOM_ACTION_PREFIX = "custom_action_"
+    DEFAULT_CUSTOM_ACTION_TEMPLATE = """<|im_start|>system
+You are a precise writing assistant. Apply the requested transformation to the selected text. Preserve factual meaning unless the transformation explicitly requires changing style or structure. Return only the transformed text, with no commentary.
+<|im_end|>
+<|im_start|>user
+<text>
+{{text}}
+</text>
+<|im_end|>"""
 
     def __init__(
         self,
@@ -59,8 +70,12 @@ class PromptManager:
         if self.user_prompts_path.exists():
             try:
                 with self.user_prompts_path.open("r", encoding="utf-8") as file:
-                    self.user_prompts = json.load(file)
-                logger.info("Loaded %s user prompts", len(self.user_prompts))
+                    loaded = json.load(file)
+                if isinstance(loaded, dict):
+                    self.user_prompts = loaded
+                    logger.info("Loaded %s user prompts", len(self.user_prompts))
+                else:
+                    logger.warning("User prompts file is not a JSON object, ignoring")
             except json.JSONDecodeError as exc:
                 logger.warning("Invalid user prompts JSON, ignoring: %s", exc)
             except Exception as exc:
@@ -189,8 +204,149 @@ class PromptManager:
 
         logger.info("Updated user prompt: %s", prompt_key)
 
+    def is_custom_action(self, prompt_key: str) -> bool:
+        """Return whether the prompt key belongs to a user-created Custom Action."""
+        prompt = self.prompts.get(prompt_key)
+        return bool(isinstance(prompt, dict) and prompt.get("custom_action") is True)
+
+    def get_custom_actions(self, visible_only: bool = False) -> List[Dict[str, Any]]:
+        """Return Custom Actions in their persisted order."""
+        actions: List[Dict[str, Any]] = []
+        for prompt_key, prompt in self.prompts.items():
+            if not self.is_custom_action(prompt_key):
+                continue
+            if visible_only and not bool(prompt.get("show_in_popup", True)):
+                continue
+
+            action = prompt.copy()
+            action["key"] = prompt_key
+            actions.append(action)
+        return actions
+
+    def get_custom_action_hotkeys(self) -> Dict[str, str]:
+        """Return enabled and disabled Custom Action hotkeys keyed by prompt key."""
+        hotkeys: Dict[str, str] = {}
+        for action in self.get_custom_actions():
+            hotkey = action.get("hotkey", "")
+            hotkeys[action["key"]] = hotkey.strip() if isinstance(hotkey, str) else ""
+        return hotkeys
+
+    def _validate_custom_action(
+        self,
+        name: str,
+        template: str,
+        temperature: float,
+        prompt_key: Optional[str] = None,
+    ) -> None:
+        normalized_name = name.strip()
+        if not normalized_name:
+            raise ValueError("Custom Action name cannot be empty.")
+
+        if not template.strip():
+            raise ValueError("Custom Action template cannot be empty.")
+        if "{{text}}" not in template:
+            raise ValueError("Custom Action template must contain {{text}}.")
+
+        if not 0.0 <= float(temperature) <= 2.0:
+            raise ValueError("Custom Action temperature must be between 0.0 and 2.0.")
+
+        for action in self.get_custom_actions():
+            if action["key"] == prompt_key:
+                continue
+            existing_name = str(action.get("name", "")).strip()
+            if existing_name.casefold() == normalized_name.casefold():
+                raise ValueError(f"A Custom Action named '{normalized_name}' already exists.")
+
+    def add_custom_action(
+        self,
+        name: str,
+        template: Optional[str] = None,
+        temperature: float = 0.7,
+        model: Optional[str] = None,
+        hotkey: str = "",
+        show_in_popup: bool = True,
+    ) -> str:
+        """Create a Custom Action and return its stable prompt key."""
+        normalized_name = name.strip()
+        resolved_template = template or self.DEFAULT_CUSTOM_ACTION_TEMPLATE
+        resolved_temperature = float(temperature)
+        self._validate_custom_action(
+            normalized_name,
+            resolved_template,
+            resolved_temperature,
+        )
+
+        while True:
+            prompt_key = f"{self.CUSTOM_ACTION_PREFIX}{uuid.uuid4().hex[:12]}"
+            if prompt_key not in self.prompts:
+                break
+
+        action: Dict[str, Any] = {
+            "name": normalized_name,
+            "template": resolved_template,
+            "temperature": resolved_temperature,
+            "custom_action": True,
+            "show_in_popup": bool(show_in_popup),
+            "hotkey": hotkey.strip(),
+        }
+        if model and model.strip():
+            action["model"] = model.strip()
+
+        self.user_prompts[prompt_key] = action.copy()
+        self.prompts[prompt_key] = action.copy()
+        logger.info("Added Custom Action: %s (%s)", normalized_name, prompt_key)
+        return prompt_key
+
+    def update_custom_action(
+        self,
+        prompt_key: str,
+        *,
+        name: str,
+        template: str,
+        temperature: float,
+        model: Optional[str] = None,
+        hotkey: str = "",
+        show_in_popup: bool = True,
+    ) -> None:
+        """Update all editable metadata for an existing Custom Action."""
+        if not self.is_custom_action(prompt_key):
+            raise ValueError(f"Unknown Custom Action: {prompt_key}")
+
+        normalized_name = name.strip()
+        resolved_temperature = float(temperature)
+        self._validate_custom_action(
+            normalized_name,
+            template,
+            resolved_temperature,
+            prompt_key=prompt_key,
+        )
+
+        action: Dict[str, Any] = {
+            "name": normalized_name,
+            "template": template,
+            "temperature": resolved_temperature,
+            "custom_action": True,
+            "show_in_popup": bool(show_in_popup),
+            "hotkey": hotkey.strip(),
+        }
+        if model and model.strip():
+            action["model"] = model.strip()
+
+        self.user_prompts[prompt_key] = action.copy()
+        self.prompts[prompt_key] = action.copy()
+        logger.info("Updated Custom Action: %s (%s)", normalized_name, prompt_key)
+
+    def delete_custom_action(self, prompt_key: str) -> None:
+        """Delete a user-created Custom Action."""
+        if not self.is_custom_action(prompt_key):
+            raise ValueError(f"Unknown Custom Action: {prompt_key}")
+
+        self.user_prompts.pop(prompt_key, None)
+        self.prompts.pop(prompt_key, None)
+        logger.info("Deleted Custom Action: %s", prompt_key)
+
     def save(self) -> None:
-        """Persist user prompt overrides."""
+        """Persist user prompt overrides and Custom Actions."""
         if not self.user_prompts:
             if self.user_prompts_path.exists():
                 self.user_prompts_path.unlink()

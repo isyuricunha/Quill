@@ -1,6 +1,6 @@
 # Actions and Prompts
 
-Bragi ships with focused writing actions. The built-in prompts are intentionally compact and use separate system and user messages so permanent behavior is kept distinct from selected text.
+Bragi ships with focused writing actions and also supports user-created Custom Actions. Built-in prompts are intentionally compact and use separate system and user messages so permanent behavior is kept distinct from selected text.
 
 ## Built-in actions
 
@@ -34,11 +34,19 @@ Default temperature: `0.3`
 
 Translates naturally into the target language configured in Settings. It preserves formatting, code, URLs, handles, placeholders and other content that should not be casually altered.
 
-### Custom
+### Custom Instruction
 
 Default temperature: `0.7`
 
-Uses the instruction typed in the popup. The selected text is treated as data rather than as instructions that can override the prompt hierarchy.
+Uses the one-off instruction typed in the popup. The selected text is treated as data rather than as instructions that can override the prompt hierarchy.
+
+## Custom Actions
+
+Custom Actions are reusable user-created actions. Each one has its own name, ChatML template, temperature, optional model override, optional global hotkey and popup visibility setting.
+
+They use the same request path as built-in actions, so they also support direct execution and Quick Repeat.
+
+See [Custom Actions](custom-actions.md) for the complete workflow.
 
 ## ChatML templates
 
@@ -61,19 +69,23 @@ Bragi parses message structure before substituting selected text. This prevents 
 
 `{{text}}` is replaced with the selected text.
 
-`{{instruction}}` is replaced with the custom instruction supplied in the popup.
+`{{instruction}}` is replaced with the one-off Custom Instruction supplied in the popup.
 
 Substitution is literal, not recursively interpreted.
 
+Custom Actions must contain `{{text}}` so the selected text is always part of the action request.
+
 ## Model Override
 
-Each prompt can optionally specify its own model.
+Each built-in prompt and Custom Action can optionally specify its own model.
 
-If the override is empty, the global model from the API tab is used. This makes it possible to use a fast model for Grammar Check and a stronger model for Rewrite or Professional without changing the default workflow for users who do not need it.
+If the override is empty, the global model from the API tab is used. This makes it possible to use a fast model for Grammar Check or a lightweight Custom Action and a stronger model for Rewrite or Professional without changing the global configuration.
 
 ## User overrides
 
-Editing a prompt creates or updates an entry in `user_prompts.json`. Reset to Default removes that override and restores the built-in prompt.
+Editing a built-in prompt creates or updates an entry in `user_prompts.json`. Reset to Default removes that override and restores the built-in prompt.
+
+Custom Actions are also stored in `user_prompts.json`, but they are user-owned objects rather than overrides of bundled defaults. They can be renamed, hidden from the popup or deleted.
 
 Built-in prompts live in `resources/default_prompts.json` and should normally be changed through source control rather than by editing a packaged installation.
 

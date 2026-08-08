@@ -9,7 +9,8 @@ This directory contains the maintained documentation for Bragi, a system-wide AI
 | [Getting Started](getting-started.md) | Installer vs portable, first launch, first transformation |
 | [Configuration](configuration.md) | API, general settings, translation, updates and prompts |
 | [Actions and Prompts](actions-and-prompts.md) | Built-in actions, ChatML, temperatures and model overrides |
-| [Hotkeys](hotkeys.md) | Main hotkey, Quick Repeat, direct actions and conflicts |
+| [Custom Actions](custom-actions.md) | User-created actions, popup visibility, model overrides and direct hotkeys |
+| [Hotkeys](hotkeys.md) | Main hotkey, Quick Repeat, built-in and Custom Action shortcuts |
 | [Updates and Data](updates-and-data.md) | Updates, storage locations and Quill-to-Bragi migration |
 | [Security and Privacy](security-and-privacy.md) | API key storage, clipboard behavior and network requests |
 | [Troubleshooting](troubleshooting.md) | Selection, hotkeys, API, updater and migration problems |

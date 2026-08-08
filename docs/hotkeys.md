@@ -15,15 +15,19 @@ Bragi listens for global shortcuts through `pynput`.
 
 ## Main hotkey
 
-The main hotkey copies the current selection, opens the Bragi popup near the cursor and lets you choose an action or enter a custom instruction.
+The main hotkey copies the current selection, opens the Bragi popup near the cursor and lets you choose a built-in action, a visible Custom Action, or enter a custom instruction.
 
 ## Quick Repeat
 
-Quick Repeat reuses the last action and instruction on the current selection without reopening the popup. If no previous action exists, Bragi falls back to the normal popup flow.
+Quick Repeat reuses the last action and instruction on the current selection without reopening the popup. Custom Actions participate in Quick Repeat too.
+
+If no previous action exists, Bragi falls back to the normal popup flow.
 
 ## Direct action hotkeys
 
 A direct action immediately processes the selected text with its assigned prompt. No popup is shown.
+
+Built-in direct action shortcuts are configured in **Settings > Hotkey**. Custom Action shortcuts are configured on the individual action in **Settings > Custom Actions**.
 
 Every direct action shortcut is optional. Leave its field empty to disable it.
 
@@ -35,7 +39,7 @@ Bragi requires configured shortcuts to include at least one modifier: Ctrl, Shif
 
 It also rejects:
 
-- duplicate shortcuts inside Bragi
+- duplicate shortcuts across the main hotkey, Quick Repeat, built-in actions and Custom Actions
 - `Alt+F4`
 - `Ctrl+Alt+Delete`
 - `Ctrl+Shift+Esc`
