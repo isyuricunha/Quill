@@ -27,11 +27,13 @@ sys.path.insert(0, str(project_root))
 def run_smoke_test() -> int:
     """Verify that critical packaged modules can be imported."""
     try:
-        from app.application import BragiApp  # noqa: F401
+        from app.configurable_application import BragiApp  # noqa: F401
+        from core.action_layout import get_visible_popup_actions  # noqa: F401
         from core.app_paths import get_user_data_dir  # noqa: F401
         from core.config_manager import ConfigManager  # noqa: F401
         from core.prompt_manager import PromptManager  # noqa: F401
         from core.single_instance import SingleInstanceLock  # noqa: F401
+        from ui.action_layout_settings import SettingsWindow  # noqa: F401
     except Exception:
         return 1
 
@@ -53,7 +55,7 @@ def main() -> int:
     if "--smoke-test" in sys.argv:
         return run_smoke_test()
 
-    from app.application import BragiApp
+    from app.configurable_application import BragiApp
     from core.single_instance import SingleInstanceLock
 
     setup_logging()

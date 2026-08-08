@@ -67,6 +67,18 @@ Shortcuts must include Ctrl, Shift or Alt. Bragi rejects duplicate shortcuts acr
 
 See [Hotkeys](hotkeys.md).
 
+## Popup Actions
+
+The Popup Actions tab controls the main popup independently from prompt definitions and hotkeys.
+
+Every built-in and Custom Action appears in one ordered list. Use **Move Up** and **Move Down** to change button order, and the checkbox beside each action to show or hide it.
+
+Hiding an action does not delete it and does not disable its direct hotkey.
+
+**Restore Defaults** restores all built-in actions to their original order and visibility while preserving Custom Actions and their hidden state.
+
+See [Popup Actions](popup-actions.md).
+
 ## Custom Actions
 
 The Custom Actions tab lets you create reusable actions with:
@@ -75,10 +87,9 @@ The Custom Actions tab lets you create reusable actions with:
 - temperature
 - optional model override
 - optional direct hotkey
-- popup visibility
 - ChatML prompt template
 
-Every Custom Action prompt must contain `{{text}}`.
+Every Custom Action prompt must contain `{{text}}`. Popup visibility and ordering are managed centrally in **Popup Actions**.
 
 See [Custom Actions](custom-actions.md).
 
@@ -113,5 +124,7 @@ Portable builds:
 <Bragi folder>\data\config.json
 <Bragi folder>\data\user_prompts.json
 ```
+
+Popup ordering and hidden-action state are stored in `config.json`. Custom Action definitions remain in `user_prompts.json`.
 
 See [Updates and Data](updates-and-data.md) for migration details.

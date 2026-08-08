@@ -13,9 +13,10 @@ Each action has:
 - a temperature from `0.0` to `2.0`
 - an optional model override
 - an optional global direct hotkey
-- a **Show this action in the popup** toggle
 
 The prompt must contain `{{text}}`. Bragi replaces that variable with the text selected in the active application.
+
+Popup visibility and ordering are configured separately in **Settings > Popup Actions** so built-in and Custom Actions can be managed in one place.
 
 ## Example
 
@@ -36,9 +37,13 @@ You could then expose it in the normal popup, assign a direct hotkey, or both.
 
 ## Popup behavior
 
-When **Show this action in the popup** is enabled, the action appears after the built-in actions. The popup uses a compact scrollable action grid so adding several actions does not make the window grow without limit.
+New Custom Actions are added to the popup layout automatically and are visible by default.
 
-Disabling the toggle hides the action from the popup without deleting it.
+Use **Settings > Popup Actions** to move a Custom Action above or below built-in actions, or hide it without deleting it. Hiding a Custom Action does not disable its direct hotkey or Quick Repeat behavior.
+
+Bragi v2.1 stored popup visibility directly on each Custom Action. When upgrading, that old hidden/visible choice is preserved until the unified popup layout is saved.
+
+See [Popup Actions](popup-actions.md).
 
 ## Direct hotkeys
 
@@ -67,5 +72,7 @@ If an action is deleted after being used, Bragi detects that the previous action
 ## Storage
 
 Custom Actions are stored in `user_prompts.json` alongside normal prompt overrides. Each action receives a stable internal key, so renaming the visible action does not break its persisted identity.
+
+Popup ordering and visibility are stored separately in `config.json`.
 
 Deleting a Custom Action removes it from `user_prompts.json`. Unlike built-in prompts, a deleted Custom Action has no Reset to Default operation.
