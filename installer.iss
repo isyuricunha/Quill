@@ -1,6 +1,6 @@
 #define MyAppName "Bragi"
 #define MyAppPublisher "isyuricunha"
-#define MyAppURL "https://github.com/isyuricunha/Quill"
+#define MyAppURL "https://github.com/isyuricunha/bragi"
 
 #ifndef AppVersion
   #define AppVersion "0.0.0"

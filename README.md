@@ -4,8 +4,8 @@
 
 **System-wide AI writing assistance for Windows, powered by your own OpenAI-compatible API.**
 
-[![Latest Release](https://img.shields.io/github/v/release/isyuricunha/Quill?display_name=tag&sort=semver)](../../releases/latest)
-[![Auto Release](https://github.com/isyuricunha/Quill/actions/workflows/release.yml/badge.svg)](../../actions/workflows/release.yml)
+[![Latest Release](https://img.shields.io/github/v/release/isyuricunha/bragi?display_name=tag&sort=semver)](../../releases/latest)
+[![Auto Release](https://github.com/isyuricunha/bragi/actions/workflows/release.yml/badge.svg)](../../actions/workflows/release.yml)
 [![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?logo=windows&logoColor=white)](#requirements)
 [![License](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 

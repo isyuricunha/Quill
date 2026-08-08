@@ -66,11 +66,11 @@ The installer retains the historical internal Inno Setup AppId from Quill so an 
 
 Do not change this AppId without intentionally designing a new migration strategy.
 
-## Repository rename transition
+## Repository rename compatibility
 
-Bragi may be published from the historical repository path during the rename transition. GitHub redirects old repository URLs after a rename, and runtime updater validation accepts release download URLs from both the historical Quill path and the Bragi path.
+The repository rename is complete. The canonical project path is now `isyuricunha/bragi`, and current Bragi builds query releases from that path directly.
 
-This keeps existing installed clients updateable across the repository rename.
+For upgrade compatibility, installer download validation still accepts the historical `isyuricunha/Quill` release path. GitHub redirects the old repository URL to the current repository, and Bragi compares the accepted repository prefix case-insensitively so URL capitalization cannot break updates again.
 
 ## Commit authorship
 

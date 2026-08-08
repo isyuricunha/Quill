@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 from core.app_paths import get_resource_dir, is_installed_build
-from core.brand import APP_NAME, CURRENT_REPOSITORY, RENAMED_REPOSITORY
+from core.brand import APP_NAME, CURRENT_REPOSITORY, LEGACY_REPOSITORIES
 
 
 logger = logging.getLogger(__name__)
@@ -19,16 +19,13 @@ logger = logging.getLogger(__name__)
 class UpdateManager:
     """Check, download and launch Bragi updates from GitHub Releases."""
 
-    # Keep the historical repository endpoint as the canonical request URL during
-    # the rename transition. GitHub redirects this URL after a repository rename,
-    # so both old and new Bragi installations keep updating correctly.
     API_URL = f"https://api.github.com/repos/{CURRENT_REPOSITORY}/releases/latest"
     RELEASES_URL = f"https://github.com/{CURRENT_REPOSITORY}/releases"
     USER_AGENT = "Bragi-Updater"
     INSTALLER_SUFFIX = "-setup-windows-x64.exe"
-    ALLOWED_DOWNLOAD_PREFIXES = (
-        f"https://github.com/{CURRENT_REPOSITORY}/releases/download/",
-        f"https://github.com/{RENAMED_REPOSITORY}/releases/download/",
+    ALLOWED_DOWNLOAD_PREFIXES = tuple(
+        f"https://github.com/{repository}/releases/download/"
+        for repository in (CURRENT_REPOSITORY, *LEGACY_REPOSITORIES)
     )
 
     def __init__(self):
@@ -40,6 +37,15 @@ class UpdateManager:
         if not match:
             raise ValueError(f"Invalid semantic version: {version}")
         return tuple(int(part) for part in match.groups())
+
+    @classmethod
+    def _is_allowed_installer_url(cls, url: str) -> bool:
+        """Return whether an installer URL belongs to a known Bragi release path."""
+        normalized_url = str(url).casefold()
+        return any(
+            normalized_url.startswith(prefix.casefold())
+            for prefix in cls.ALLOWED_DOWNLOAD_PREFIXES
+        )
 
     def _read_current_version(self) -> str:
         version_file = get_resource_dir() / "version.txt"
@@ -109,7 +115,7 @@ class UpdateManager:
         if not url or not name:
             raise RuntimeError("This release does not contain a Windows installer.")
 
-        if not any(str(url).startswith(prefix) for prefix in self.ALLOWED_DOWNLOAD_PREFIXES):
+        if not self._is_allowed_installer_url(str(url)):
             raise RuntimeError("Refusing to download an installer from an unexpected URL.")
 
         safe_name = Path(str(name)).name

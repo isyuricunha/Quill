@@ -68,7 +68,7 @@ The tray menu contains **Check for Updates**.
 
 When `Check for updates when Bragi starts` is enabled, Bragi performs one check shortly after startup. It remains silent when the installed version is current.
 
-The updater reads the latest public GitHub Release and compares semantic versions.
+The updater reads the latest public GitHub Release from the canonical `isyuricunha/bragi` repository and compares semantic versions.
 
 ## Installed update flow
 
@@ -88,4 +88,6 @@ Keep the portable `data` folder when replacing the executable bundle.
 
 ## Repository rename compatibility
 
-The updater is designed to survive the repository's Quill-to-Bragi rename transition. The historical GitHub repository URL is retained as a compatible endpoint because GitHub redirects renamed repositories, while installer download validation accepts both the historical and Bragi repository paths.
+The repository rename from Quill to Bragi is complete. Current builds use `isyuricunha/bragi` as the canonical GitHub endpoint.
+
+The historical `isyuricunha/Quill` release path remains accepted only for compatibility with redirected legacy URLs. Repository-prefix validation is case-insensitive, while the host, owner, repository and `/releases/download/` path still have to match an expected Bragi location.
