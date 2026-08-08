@@ -34,7 +34,8 @@ Bragi evolved from the Quill codebase and is now maintained as an independent pr
 - **Summarize** for concise summaries that preserve important facts and caveats
 - **Translate** with a configurable target language
 - **Custom Instruction** for one-off transformations
-- **Custom Actions** with their own prompt, temperature, model override, optional hotkey, and popup visibility
+- **Custom Actions** with their own prompt, temperature, model override and optional hotkey
+- **Configurable popup actions** with ordering, visibility and built-in restore
 - **Direct action hotkeys** for built-in and user-created actions
 - **Quick Repeat** to reuse the last action without reopening the popup
 - **Per-prompt model override** while keeping a global default model
@@ -90,11 +91,21 @@ More detail: [Actions and Prompts](docs/actions-and-prompts.md).
 
 Open **Settings > Custom Actions** to create reusable actions for tasks you do repeatedly.
 
-Each Custom Action has a name, ChatML prompt, temperature, optional model override, optional global hotkey, and a toggle controlling whether it appears in the popup. Custom Actions use the same processing pipeline as built-in actions, so they work with direct execution and Quick Repeat too.
+Each Custom Action has a name, ChatML prompt, temperature, optional model override and optional global hotkey. Custom Actions use the same processing pipeline as built-in actions, so they work with direct execution and Quick Repeat too.
 
 The prompt must contain `{{text}}`, which is replaced with the current selection.
 
 More detail: [Custom Actions](docs/custom-actions.md).
+
+## Popup Actions
+
+Open **Settings > Popup Actions** to control the button layout without changing prompts or hotkeys.
+
+Built-in and Custom Actions share one ordered list. Use **Move Up** and **Move Down** to choose the order, and uncheck an action to hide it from the popup. Hidden actions are not deleted, and any configured direct hotkey keeps working.
+
+**Restore Defaults** makes all built-in actions visible again and restores their original order while preserving Custom Actions and their hidden state.
+
+More detail: [Popup Actions](docs/popup-actions.md).
 
 ## Hotkeys
 
@@ -113,12 +124,13 @@ More detail: [Hotkeys](docs/hotkeys.md).
 
 ## Settings
 
-Bragi organizes configuration into five tabs:
+Bragi organizes configuration into six tabs:
 
 - **General**: Start with Windows, translation target language, update checks
 - **API**: Base URL, API key, global model, additional JSON parameters
 - **Hotkey**: main hotkey, Quick Repeat, built-in direct action hotkeys
-- **Custom Actions**: user-created actions, popup visibility, hotkeys, temperature and model overrides
+- **Popup Actions**: action order, popup visibility and built-in restore
+- **Custom Actions**: user-created actions, hotkeys, temperature and model overrides
 - **Prompts**: built-in prompt name, temperature, optional model override, ChatML template, reset to default
 
 The Translate target can be selected from common languages or typed manually.
@@ -157,7 +169,7 @@ Bragi separates user data based on build type:
 | Installed | `%LOCALAPPDATA%\Bragi` |
 | Portable | `data` beside `Bragi.exe` |
 
-The primary user files are `config.json` and `user_prompts.json`. Custom Actions are stored in `user_prompts.json` alongside prompt overrides.
+The primary user files are `config.json` and `user_prompts.json`. Custom Actions are stored in `user_prompts.json` alongside prompt overrides, while popup ordering and hidden-action state are stored in `config.json`.
 
 ### Upgrading from Quill
 
@@ -201,6 +213,7 @@ The full documentation lives in [`/docs`](docs/README.md):
 - [Getting Started](docs/getting-started.md)
 - [Configuration](docs/configuration.md)
 - [Actions and Prompts](docs/actions-and-prompts.md)
+- [Popup Actions](docs/popup-actions.md)
 - [Custom Actions](docs/custom-actions.md)
 - [Hotkeys](docs/hotkeys.md)
 - [Updates and Data](docs/updates-and-data.md)
